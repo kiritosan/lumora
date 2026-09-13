@@ -232,6 +232,8 @@
     @media (max-width: 620px) { .topbar { gap: 20px; } .brand strong { font-size: 18px; } .brand-mark { width: 30px; height: 30px; } .nav { gap: 16px; } .nav button { font-size: 11px; } .avatar { display: none; } .top-actions { display: none; } h1 { font-size: 26px; } .intro { display: block; margin-bottom: 22px; } .intro p { font-size: 11px; } .intro-actions { padding-top: 18px; } .intro-actions .stat { display: block; text-align: left; min-width: 36px; } .intro-actions .stat strong { font-size: 20px; } .intro-actions .divider { display: block; margin-right: auto; } .intro-actions .btn { min-height: 37px; } .workspace { grid-template-columns: 1fr; } .stage { min-height: 414px; } .preview-wrap { width: 247px; margin: 22px 0; } .stage-label span { display: block; } .edition, .stage-note { display: none; } .stage-footer { padding: 0 18px 17px; } #currentTitle { max-width: 200px; } .current-info .pill { display: inline-block; } .editor-header { padding: 16px 18px; } fieldset { padding: 17px 18px; } .materials .swatch { height: 40px; } .editor-footnote { margin-top: 10px; } .collection { margin-top: 25px; } .collection-heading { flex-wrap: wrap; } .collection-actions { width: 100%; } .search { flex: 1; } .search input { width: 100%; } .collection-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .thumbnail { height: 165px; } .upload-tile { min-height: 224px; } footer { align-items: flex-start; } footer span:last-child { display: none; } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } .collectible { transform: none !important; } }
   </style>
+  <link rel="stylesheet" href="museum.css">
+  <link rel="stylesheet" href="physics.css">
 </head>
 <body>
   <svg class="sprite" xmlns="http://www.w3.org/2000/svg"><defs>
@@ -267,13 +269,14 @@
         <div class="stage-toolbar"><div class="stage-label"><svg class="icon"><use href="#i-spark"/></svg>珍藏展台 <span>THE SHOWCASE</span></div><div class="stage-tools"><button class="icon-btn" id="favoriteBtn" aria-label="心动收藏" title="心动收藏" aria-pressed="false"><svg class="icon"><use href="#i-heart"/></svg></button><button class="icon-btn" id="exportBtn" aria-label="导出卡片图片" title="导出卡片图片"><svg class="icon"><use href="#i-download"/></svg></button><button class="icon-btn" id="musicBtn" aria-label="播放背景音乐" title="播放背景音乐" aria-pressed="false" hidden><svg class="icon"><use href="#i-music"/></svg></button><button class="icon-btn" id="enableMotion" aria-label="开启陀螺仪" title="开启陀螺仪" aria-pressed="false"><svg class="icon"><use href="#i-phone"/></svg></button><button class="icon-btn" id="focusBtn" aria-label="沉浸展示" title="沉浸展示 · Esc 退出" aria-pressed="false"><svg class="icon"><use href="#i-expand"/></svg></button></div></div>
         <div class="stage" id="stage"><span class="stage-note">MADE OF MOMENTS · KEPT FOREVER</span><div class="edition">PERSONAL EDITION<strong id="editionNumber">No. 001</strong></div><div class="orbit"></div><div class="preview-wrap" id="preview"></div><div class="stage-empty" id="stageEmpty" hidden><h3>下一份心动，由你定义</h3><p>上传喜欢的图片，开启你的收藏集。</p><button class="btn primary" data-upload>添加第一件藏品</button></div></div>
         <div class="stage-footer"><div class="current-info"><h2><span id="currentTitle">正在准备展台</span><span class="pill" id="currentMaterial">镭射典藏</span></h2><p id="currentDescription">每一份热爱，都值得被珍藏</p></div><div class="pagination"><button class="icon-btn" id="prevBtn" aria-label="上一件"><svg class="icon"><use href="#i-left"/></svg></button><span id="pageNumber">01 / 04</span><button class="icon-btn" id="nextBtn" aria-label="下一件"><svg class="icon"><use href="#i-right"/></svg></button></div></div>
-        <div class="stage-hint"><span><svg class="icon"><use href="#i-mouse"/></svg>移动鼠标，感受流光</span><span><svg class="icon"><use href="#i-phone"/></svg>滑动切换 · 支持重力感应</span></div>
+        <div class="museum-controls"><div class="museum-actions"><button class="btn" id="flipBtn" type="button" aria-pressed="false" disabled><svg class="icon"><use href="#i-reset"/></svg><span>翻看背面</span></button><button class="btn" id="physicsBtn" type="button" disabled><svg class="icon"><use href="#i-mouse"/></svg>物理把玩</button></div><label class="light-control" for="lightInput">展灯温度 <select id="lightInput"><option value="warm">暖金展灯</option><option value="neutral">自然柔光</option><option value="cool">冷月映照</option></select></label></div>
+        <div class="stage-hint"><span><svg class="icon"><use href="#i-mouse"/></svg>移动追光 · 双击翻面</span><span><svg class="icon"><use href="#i-phone"/></svg>滑动切换 · 重力感应</span></div>
       </section>
       <aside class="editor" id="editor"><div class="editor-header"><h2><svg class="icon"><use href="#i-sliders"/></svg>藏品工坊</h2><span>实时预览</span></div>
         <fieldset id="editorFields" disabled aria-label="当前藏品设置">
           <div class="field"><label class="field-label" for="titleInput">藏品名称 <span>给喜欢起个名字</span></label><input class="text-input" id="titleInput" maxlength="40" placeholder="未命名藏品"></div>
-          <div class="field"><div class="field-label" id="shapeLabel">展示形态</div><div class="segmented" role="group" aria-labelledby="shapeLabel"><button data-shape="card" aria-pressed="true"><svg class="icon"><use href="#i-card"/></svg>典藏卡片</button><button data-shape="badge" aria-pressed="false"><svg class="icon"><use href="#i-badge"/></svg>圆形徽章</button></div></div>
-          <div class="field"><div class="field-label" id="materialLabel">表面材质 <span>让光，有迹可循</span></div><div class="materials" role="group" aria-labelledby="materialLabel"><button class="material" data-material="holo" aria-pressed="true"><span class="swatch holo"></span>镭射</button><button class="material" data-material="pearl" aria-pressed="false"><span class="swatch pearl"></span>珠光</button><button class="material" data-material="metal" aria-pressed="false"><span class="swatch metal"></span>金属</button><button class="material" data-material="matte" aria-pressed="false"><span class="swatch matte"></span>磨砂</button></div></div>
+          <div class="field"><div class="field-label" id="shapeLabel">展示形态</div><div class="segmented" role="group" aria-labelledby="shapeLabel"><button data-shape="card" aria-pressed="true"><svg class="icon"><use href="#i-card"/></svg>典藏卡片</button><button data-shape="badge" aria-pressed="false"><svg class="icon"><use href="#i-badge"/></svg>圆形徽章</button><button data-shape="square" aria-pressed="false">方形画砖</button><button data-shape="arch" aria-pressed="false">拱门藏画</button><button data-shape="polaroid" aria-pressed="false">即影相纸</button></div></div>
+          <div class="field"><div class="field-label" id="materialLabel">表面材质 <span>让光，有迹可循</span></div><div class="materials" role="group" aria-labelledby="materialLabel"><button class="material" data-material="holo" aria-pressed="true"><span class="swatch holo"></span>镭射</button><button class="material" data-material="pearl" aria-pressed="false"><span class="swatch pearl"></span>珠光</button><button class="material" data-material="metal" aria-pressed="false"><span class="swatch metal"></span>金属</button><button class="material" data-material="matte" aria-pressed="false"><span class="swatch matte"></span>磨砂</button><button class="material" data-material="glass" aria-pressed="false"><span class="swatch glass"></span>冰晶</button><button class="material" data-material="brushed" aria-pressed="false"><span class="swatch brushed"></span>拉丝</button><button class="material" data-material="silk" aria-pressed="false"><span class="swatch silk"></span>绸缎</button><button class="material" data-material="prismatic" aria-pressed="false"><span class="swatch prismatic"></span>棱镜</button></div></div>
           <div class="field"><label class="field-label" for="shineInput">光效强度 <output id="shineValue">55%</output></label><input class="range" id="shineInput" type="range" min="0" max="100" value="55"></div>
           <div class="field"><label class="field-label" for="borderInput">边框工艺</label><div class="border-row"><select id="borderInput"><option value="classic">精装金属边</option><option value="minimal">极简细边</option><option value="glow">柔光描边</option></select><div class="colors" aria-label="边框颜色"><button class="color" style="--color:#d9c2ee" data-color="#d9c2ee" aria-label="雾紫边框" aria-pressed="true"></button><button class="color" style="--color:#e9c88c" data-color="#e9c88c" aria-label="香槟金边框" aria-pressed="false"></button><button class="color" style="--color:#a4e5da" data-color="#a4e5da" aria-label="薄荷绿边框" aria-pressed="false"></button><button class="color" style="--color:#f4a8c3" data-color="#f4a8c3" aria-label="樱花粉边框" aria-pressed="false"></button></div></div></div>
           <details class="adjustments"><summary>图片构图与细节</summary><div class="field"><label class="field-label" for="fitInput">图片适配</label><select id="fitInput"><option value="cover">填满画面</option><option value="contain">完整显示（适合透明图片）</option></select></div><div class="field"><label class="field-label" for="zoomInput">图片缩放 <output id="zoomValue">100%</output></label><input class="range" id="zoomInput" type="range" min="100" max="200" value="100"></div><div class="field"><label class="field-label" for="posXInput">水平焦点 <output id="posXValue">50%</output></label><input class="range" id="posXInput" type="range" min="0" max="100" value="50"></div><div class="field"><label class="field-label" for="posYInput">垂直焦点 <output id="posYValue">50%</output></label><input class="range" id="posYInput" type="range" min="0" max="100" value="50"></div><button class="btn" id="replaceBtn">替换当前图片</button><div class="field" style="margin-top:12px"><label class="field-label">背景音乐 <output id="musicVolumeValue">70%</output></label><div class="music-row"><button class="btn" id="musicUploadBtn"><svg class="icon"><use href="#i-music"/></svg>添加音乐</button><button class="btn" id="musicRemoveBtn" hidden>移除</button></div><input class="range" id="musicVolumeInput" type="range" min="0" max="100" value="70" style="margin-top:10px"><p class="music-name" id="musicName">未添加音乐 · 切换到该卡片时自动播放</p></div><button class="btn" id="deleteBtn" aria-label="删除当前藏品"><svg class="icon"><use href="#i-trash"/></svg>删除</button></details>
@@ -282,7 +285,7 @@
         </fieldset>
       </aside>
     </div>
-    <section class="collection" id="collection"><div class="collection-heading"><h2>我的收藏集 <span id="collectionCount">共 0 件</span></h2><div class="collection-actions"><label class="search"><svg class="icon"><use href="#i-search"/></svg><input id="searchInput" type="search" placeholder="寻找一份心动…" aria-label="搜索藏品"></label><select id="sortInput" aria-label="藏品排序"><option value="newest">最近添加</option><option value="oldest">最早添加</option><option value="name">名称排序</option></select></div></div><div class="filter-row" role="group" aria-label="收藏筛选"><button data-filter="all" aria-pressed="true">全部藏品</button><button data-filter="card" aria-pressed="false">典藏卡片</button><button data-filter="badge" aria-pressed="false">圆形徽章</button><button data-filter="favorite" aria-pressed="false">我的心动</button></div><div class="collection-grid" id="collectionGrid"></div></section>
+    <section class="collection" id="collection"><div class="collection-heading"><h2>我的收藏集 <span id="collectionCount">共 0 件</span></h2><div class="collection-actions"><label class="search"><svg class="icon"><use href="#i-search"/></svg><input id="searchInput" type="search" placeholder="寻找一份心动…" aria-label="搜索藏品"></label><select id="sortInput" aria-label="藏品排序"><option value="newest">最近添加</option><option value="oldest">最早添加</option><option value="name">名称排序</option></select></div></div><div class="filter-row" role="group" aria-label="收藏筛选"><button data-filter="all" aria-pressed="true">全部藏品</button><button data-filter="card" aria-pressed="false">典藏卡片</button><button data-filter="badge" aria-pressed="false">圆形徽章</button><button data-filter="square" aria-pressed="false">方形画砖</button><button data-filter="arch" aria-pressed="false">拱门藏画</button><button data-filter="polaroid" aria-pressed="false">即影相纸</button><button data-filter="favorite" aria-pressed="false">我的心动</button></div><div class="collection-grid" id="collectionGrid"></div></section>
     <footer><span>私人的小小博物馆。图片仅保存在此浏览器中，清除网站数据会移除收藏，请保留原图。</span><span>CURATED BY YOU. CHERISHED FOREVER.</span></footer>
   </main>
   <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" multiple hidden>
@@ -290,14 +293,16 @@
   <input type="file" id="replaceInput" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="drop-overlay" id="dropOverlay" hidden><h2>松手，收藏这一份喜欢</h2><p>支持 PNG / JPG / WebP / GIF / AVIF · 每张最大 20 MB</p></div>
-  <dialog id="exportDialog" aria-labelledby="exportHeading"><h2 id="exportHeading">卡片已生成</h2><img class="export-preview" id="exportPreview" alt="卡片导出预览"><p>手机上可长按图片保存到相册，或使用下方按钮</p><div class="dialog-actions"><button class="btn" id="closeExport">关闭</button><button class="btn" id="shareExport" hidden>分享 / 保存</button><a class="btn primary" id="downloadExport" download="card.png">下载 PNG</a></div></dialog>
+  <dialog id="exportDialog" aria-labelledby="exportHeading"><h2 id="exportHeading">卡片已生成</h2><img class="export-preview" id="exportPreview" alt="卡片导出预览"><p>导出为正面静态藏品图，保留造型与材质；动态光影以固定角度呈现。手机可长按保存，或使用下方按钮。</p><div class="dialog-actions"><button class="btn" id="closeExport">关闭</button><button class="btn" id="shareExport" hidden>分享 / 保存</button><a class="btn primary" id="downloadExport" download="card.png">下载 PNG</a></div></dialog>
   <dialog id="deleteDialog" aria-labelledby="deleteHeading"><h2 id="deleteHeading">移除这件藏品？</h2><p id="deleteMessage"></p><div class="dialog-actions"><button class="btn" id="cancelDelete">再想想</button><button class="btn primary" id="confirmDelete">确认移除</button></div></dialog>
   <script>
     (function() {
       'use strict';
       const $ = id => document.getElementById(id);
       const defaults = { shape: 'card', material: 'holo', shine: 55, border: 'classic', color: '#d9c2ee', fit: 'cover', zoom: 100, posX: 50, posY: 50, tilt: true, caption: true };
-      const materialNames = { holo: '镭射典藏', pearl: '温润珠光', metal: '鎏金金属', matte: '细腻磨砂' };
+      const materialNames = { holo: '镭射典藏', pearl: '温润珠光', metal: '鎏金金属', matte: '细腻磨砂', glass: '冰晶玻璃', brushed: '拉丝银', silk: '流光绸缎', prismatic: '棱镜虹彩' };
+      const shapeNames = { card: '典藏卡片', badge: '圆形徽章', square: '方形画砖', arch: '拱门藏画', polaroid: '即影相纸' };
+      const shapeRatios = { card: .71, badge: 1, square: 1, arch: .71, polaroid: .82 };
       let items = [], selectedId = null, filter = 'all', db = null, ready = false, importing = false;
       let saveTimer, toastTimer, saving = null, pendingDelete = null, replaceTarget = null, dragDepth = 0;
       const dirty = new Map();
@@ -397,12 +402,15 @@
         element.style.setProperty('--px', item.posX + '%');
         element.style.setProperty('--py', item.posY + '%');
         element.querySelector('h3').textContent = item.title || '未命名藏品';
+        element.querySelector('.back-title').textContent = item.title || '未命名藏品';
+        element.querySelector('.back-detail').textContent = `${shapeNames[item.shape] || shapeNames.card} / ${materialNames[item.material] || materialNames.holo}`;
+        element.querySelector('img').alt = element.closest('.thumbnail') ? '' : item.title;
       }
       function createCard(item, thumbnail = false) {
         const card = document.createElement('div');
         card.className = 'collectible';
         card.dataset.itemId = item.id;
-        card.innerHTML = '<div class="art-window"><img draggable="false"><div class="finish"></div><div class="grain"></div><div class="glare"></div></div><div class="card-decoration"></div><div class="card-top"><span>SHIGUANG COLLECTION</span><b>SR</b></div><div class="card-caption"><small>THE MOMENTS WE KEEP</small><h3></h3><p>PERSONAL EDITION</p></div>';
+        card.innerHTML = '<div class="card-front"><div class="art-window"><img draggable="false"><div class="finish"></div><div class="grain"></div><div class="glare"></div><div class="gallery-light"></div></div><div class="card-decoration"></div><div class="card-top"><span>SHIGUANG COLLECTION</span><b>SR</b></div><div class="card-caption"><small>THE MOMENTS WE KEEP</small><h3></h3><p>PERSONAL EDITION</p></div></div><div class="card-back" aria-hidden="true"><span class="back-label">SHIGUANG · PRIVATE ARCHIVE</span><div class="back-seal">拾<span>光</span></div><strong class="back-title"></strong><span class="back-detail"></span><span class="back-foot">每一份热爱，都有回响<br>CURATED BY YOU · KEPT FOREVER</span></div>';
         const img = card.querySelector('img');
         img.alt = thumbnail ? '' : item.title;
         img.loading = thumbnail ? 'lazy' : 'eager';
@@ -417,11 +425,12 @@
         $('currentTitle').textContent = item ? item.title || '未命名藏品' : '还没有藏品';
         $('currentMaterial').textContent = item ? materialNames[item.material] : '';
         $('currentMaterial').hidden = !item;
-        $('currentDescription').textContent = item ? `${item.demo ? '原创示例 · 可自由编辑' : '我的上传 · 私人珍藏'} / ${item.shape === 'badge' ? '圆形徽章' : '典藏卡片'}` : '添加图片，开始收藏';
+        $('currentDescription').textContent = item ? `${item.demo ? '原创示例 · 可自由编辑' : '我的上传 · 私人珍藏'} / ${shapeNames[item.shape] || shapeNames.card}` : '添加图片，开始收藏';
         $('pageNumber').textContent = `${pad(index + 1)} / ${pad(items.length)}`;
         $('editionNumber').textContent = 'No. ' + String(index + 1).padStart(3, '0');
         $('favoriteBtn').setAttribute('aria-pressed', String(!!item?.favorite));
-        $('favoriteBtn').disabled = !item;
+        $('favoriteBtn').disabled = $('flipBtn').disabled = !item;
+        $('physicsBtn').disabled = !items.length;
         $('prevBtn').disabled = $('nextBtn').disabled = items.length < 2;
       }
       function syncEditor() {
@@ -442,12 +451,13 @@
         ['shape', 'material', 'color'].forEach(key => document.querySelectorAll(`button[data-${key}]`).forEach(button => button.setAttribute('aria-pressed', String(button.dataset[key] === item[key]))));
       }
       function selectItem(id, scroll = false) {
+        resetFlip();
         selectedId = id;
         const item = current();
         $('preview').hidden = !item;
         $('stageEmpty').hidden = !!item;
         if (item) $('stage').style.setProperty('--ambient', item.color);
-        layoutTrack(0);
+        settleTrack();
         syncEditor();
         updateCurrentInfo();
         syncMusic(item);
@@ -478,7 +488,7 @@
           select.setAttribute('aria-pressed', String(item.id === selectedId));
           select.innerHTML = '<div class="thumbnail"><span class="thumb-type"></span></div><div class="item-info"><h3></h3><p></p></div>';
           select.querySelector('.thumbnail').appendChild(createCard(item, true));
-          select.querySelector('.thumb-type').textContent = item.shape === 'badge' ? 'BADGE' : 'ART CARD';
+          select.querySelector('.thumb-type').textContent = shapeNames[item.shape] || shapeNames.card;
           select.querySelector('.item-info h3').textContent = item.title || '未命名藏品';
           select.querySelector('.item-info p').textContent = `${materialNames[item.material]} · ${item.demo ? '示例藏品' : '我的上传'}`;
           select.addEventListener('click', () => selectItem(item.id, true));
@@ -620,7 +630,10 @@
         return grainPattern = ctx.createPattern(c, 'repeat');
       }
       function roundRectPath(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
-      function shapePath(ctx, x, y, w, h, r, badge) { if (badge) { ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); } else roundRectPath(ctx, x, y, w, h, r); }
+      function shapePath(ctx, x, y, w, h, r, shape) {
+        if (shape === true || shape === 'badge') { ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); }
+        else roundRectPath(ctx, x, y, w, h, shape === 'arch' ? [w / 2, w / 2, r, r] : r);
+      }
       function linear(ctx, w, h, deg, stops) {
         const rad = (deg - 90) * Math.PI / 180, len = Math.abs(w * Math.sin(rad)) + Math.abs(h * Math.cos(rad));
         const g = ctx.createLinearGradient(w / 2 - Math.cos(rad) * len / 2, h / 2 - Math.sin(rad) * len / 2, w / 2 + Math.cos(rad) * len / 2, h / 2 + Math.sin(rad) * len / 2);
@@ -647,25 +660,25 @@
         return width;
       }
       async function renderCardPng(item) {
-        const S = 3, W = 272 * S, badge = item.shape === 'badge', H = badge ? W : Math.round(W / .71);
+        const S = 3, W = 272 * S, shape = item.shape, badge = shape === 'badge', photo = shape === 'polaroid', H = Math.round(W / (shapeRatios[shape] || .71));
         const margin = 40 * S, canvas = document.createElement('canvas');
         canvas.width = W + margin * 2; canvas.height = H + margin * 2;
         const ctx = canvas.getContext('2d');
         ctx.translate(margin, margin);
-        const edge = item.color, pad = (badge ? 9 : item.border === 'minimal' ? 2 : 5) * S, radius = 15 * S, shine = item.shine / 100;
+        const edge = item.color, pad = (photo ? 13 : item.border === 'minimal' ? 2 : badge ? 9 : 5) * S, radius = (photo ? 4 : shape === 'square' ? 19 : shape === 'arch' ? 14 : 15) * S, shine = item.shine / 100;
         // 阴影
         ctx.save(); ctx.shadowColor = item.border === 'glow' ? edge + 'aa' : '#00000099'; ctx.shadowBlur = (item.border === 'glow' ? 30 : 45) * S; ctx.shadowOffsetY = 22 * S;
-        shapePath(ctx, 0, 0, W, H, radius, badge); ctx.fillStyle = '#292732'; ctx.fill(); ctx.restore();
+        shapePath(ctx, 0, 0, W, H, radius, shape); ctx.fillStyle = '#292732'; ctx.fill(); ctx.restore();
         // 边框材质
-        shapePath(ctx, 0, 0, W, H, radius, badge);
-        ctx.fillStyle = badge
+        shapePath(ctx, 0, 0, W, H, radius, shape);
+        ctx.fillStyle = photo ? linear(ctx, W, H, 130, [[0, '#f8f1e6'], [1, '#cfc5b7']]) : badge
           ? linear(ctx, W, H, 140, [[0, '#fff'], [.15, edge], [.36, '#777080'], [.55, '#eee5f7'], [.74, edge], [1, '#3a3541']])
           : linear(ctx, W, H, 145, [[0, '#ffffff99'], [.22, edge], [.48, '#292732'], [.76, edge], [1, '#ffffff99']]);
         ctx.fill();
-        if (item.border === 'glow') { ctx.save(); shapePath(ctx, 0, 0, W, H, radius, badge); ctx.lineWidth = 2 * S; ctx.strokeStyle = edge; ctx.stroke(); ctx.restore(); }
+        if (item.border === 'glow') { ctx.save(); shapePath(ctx, 0, 0, W, H, radius, shape); ctx.lineWidth = 2 * S; ctx.strokeStyle = edge; ctx.stroke(); ctx.restore(); }
         // 图片窗口
-        const ax = pad, ay = pad, aw = W - pad * 2, ah = H - pad * 2, ar = 11 * S;
-        ctx.save(); shapePath(ctx, ax, ay, aw, ah, ar, badge); ctx.clip();
+        const ax = pad, ay = pad, aw = W - pad * 2, ah = H - pad - (photo ? 57 * S : pad), ar = (photo ? 1 : shape === 'square' ? 14 : shape === 'arch' ? 9 : 11) * S;
+        ctx.save(); shapePath(ctx, ax, ay, aw, ah, ar, shape); ctx.clip();
         ctx.fillStyle = '#22232f'; ctx.fillRect(ax, ay, aw, ah);
         const img = await loadImageEl(item.image);
         const iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
@@ -680,16 +693,27 @@
         if (item.material === 'holo') { ctx.globalCompositeOperation = 'color-dodge'; ctx.fillStyle = repeating(ctx, canvas.width, canvas.height, 125, [[0, '#f4a0d050'], [.29, '#88e4ed75'], [.54, '#bb97fc20'], [.77, '#f9e0a580'], [1, '#f4a0d050']], 130 * S); ctx.fillRect(-margin, -margin, canvas.width, canvas.height); }
         else if (item.material === 'pearl') { ctx.globalCompositeOperation = 'screen'; const g = ctx.createRadialGradient(mx, my, 0, mx, my, aw * .9); g.addColorStop(0, '#ffffff99'); g.addColorStop(.25, '#e2c5ff55'); g.addColorStop(.4, '#b8efff33'); g.addColorStop(.65, '#0000'); ctx.fillStyle = g; ctx.fillRect(ax, ay, aw, ah); }
         else if (item.material === 'metal') { ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = repeating(ctx, canvas.width, canvas.height, 110, [[0, '#fff0'], [.4, '#fbe6ae90'], [.55, '#30251840'], [.64, '#fff6'], [1, '#fff0']], 160 * S); ctx.fillRect(-margin, -margin, canvas.width, canvas.height); }
+        else if (item.material === 'glass') { ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = linear(ctx, W, H, 115, [[0, '#fff0'], [.25, '#fff0'], [.26, '#ffffff99'], [.3, '#ffffff0a'], [.48, '#fff0'], [.5, '#a8ddec77'], [.56, '#fff0'], [.78, '#ffffff44'], [.8, '#fff0'], [1, '#fff0']]); ctx.fillRect(ax, ay, aw, ah); }
+        else if (item.material === 'brushed') {
+          ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = linear(ctx, W, H, 110, [[0, '#18212c88'], [.35, '#e9f3ffbb'], [.48, '#48556355'], [.65, '#ffffff99'], [1, '#10182088']]); ctx.fillRect(ax, ay, aw, ah);
+          ctx.fillStyle = '#ffffff22'; for (let y = ay; y < ay + ah; y += 1.5 * S) ctx.fillRect(ax, y, aw, .5 * S);
+        }
+        else if (item.material === 'silk') { ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = repeating(ctx, W, H, 135, [[0, '#160f2b66'], [.29, '#b9aad422'], [.45, '#ffe6f9aa'], [.65, '#30213d55'], [.85, '#eedce677'], [1, '#160f2b66']], 250 * S); ctx.fillRect(ax, ay, aw, ah); }
+        else if (item.material === 'prismatic') { ctx.globalCompositeOperation = 'color-dodge'; const g = ctx.createConicGradient(35 * Math.PI / 180, mx, my); ['#f9dfa433', '#b0f7ed88', '#ccbcfa55', '#f4b9d188', '#f9dfa433', '#a9d9fa88', '#f9dfa433'].forEach((color, i) => g.addColorStop(i / 6, color)); ctx.fillStyle = g; ctx.fillRect(ax, ay, aw, ah); }
         else { ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = linear(ctx, W, H, 140, [[0, '#ffffff22'], [1, '#00000022']]); ctx.fillRect(ax, ay, aw, ah); }
         ctx.restore();
         // 颗粒
-        ctx.save(); ctx.globalAlpha = .17; ctx.fillStyle = getGrain(ctx); ctx.fillRect(ax, ay, aw, ah); ctx.restore();
+        ctx.save(); ctx.globalAlpha = { glass: .04, silk: .08, prismatic: .1 }[item.material] ?? .17; ctx.fillStyle = getGrain(ctx); ctx.fillRect(ax, ay, aw, ah); ctx.restore();
         // 高光
         ctx.save(); ctx.globalAlpha = item.material === 'matte' ? shine * .15 : shine; ctx.globalCompositeOperation = 'screen';
         const glare = ctx.createRadialGradient(mx, my, 0, mx, my, aw * .8); glare.addColorStop(0, '#ffffff77'); glare.addColorStop(.35, '#ffffff05'); glare.addColorStop(.6, '#0000');
         ctx.fillStyle = glare; ctx.fillRect(ax, ay, aw, ah); ctx.restore();
+        ctx.save(); ctx.globalAlpha = shine * .32; ctx.globalCompositeOperation = 'soft-light';
+        const lamp = ctx.createRadialGradient(mx, my, 0, mx, my, aw * .8);
+        lamp.addColorStop(0, { warm: '#ffe3b2', neutral: '#ffffff', cool: '#afd9ff' }[$('lightInput').value]); lamp.addColorStop(1, '#ffffff00');
+        ctx.fillStyle = lamp; ctx.fillRect(ax, ay, aw, ah); ctx.restore();
         // 标题与装饰
-        if (item.caption && !badge) {
+        if (item.caption && !badge && !photo) {
           const cx = pad, cw = W - pad * 2, ch = 92 * S;
           const g = ctx.createLinearGradient(0, H - pad - ch, 0, H - pad); g.addColorStop(0, '#12132200'); g.addColorStop(1, '#121322bb');
           ctx.fillStyle = g; ctx.fillRect(cx, H - pad - ch, cw, ch);
@@ -699,15 +723,18 @@
           drawText(ctx, 'PERSONAL EDITION', 57 * S, H - 23 * S, `${7 * S}px sans-serif`, '#ffffff99', 2 * S);
         }
         ctx.restore();
-        if (item.caption) {
+        if (photo && item.caption) drawText(ctx, item.title || '未命名藏品', W / 2, H - 18 * S, `italic ${18 * S}px Georgia, serif`, '#403b37', 2 * S, 'center', W - 28 * S);
+        if (item.caption && !photo) {
           ctx.save(); ctx.strokeStyle = badge ? '#ffffff55' : '#ffffff44'; ctx.lineWidth = S;
           if (badge) { shapePath(ctx, 14 * S, 14 * S, W - 28 * S, H - 28 * S, 0, true); ctx.stroke(); }
           else if (item.border !== 'minimal') {
-            roundRectPath(ctx, 12 * S, 12 * S, W - 24 * S, H - 24 * S, 5 * S); ctx.stroke();
-            ctx.shadowColor = '#000'; ctx.shadowBlur = 4 * S;
-            drawText(ctx, 'SHIGUANG COLLECTION', 25 * S, 29 * S, `${8 * S}px sans-serif`, '#ffffffe0', 2 * S);
-            const bw = drawText(ctx, 'SR', W - 30 * S, 29 * S, `${9 * S}px sans-serif`, '#ffffffe0', S, 'right');
-            ctx.strokeStyle = '#ffffff66'; ctx.strokeRect(W - 30 * S - bw - 5 * S, 19 * S, bw + 10 * S, 14 * S);
+            shapePath(ctx, 12 * S, 12 * S, W - 24 * S, H - 24 * S, (shape === 'arch' ? 9 : 5) * S, shape); ctx.stroke();
+            if (shape !== 'arch') {
+              ctx.shadowColor = '#000'; ctx.shadowBlur = 4 * S;
+              drawText(ctx, 'SHIGUANG COLLECTION', 25 * S, 29 * S, `${8 * S}px sans-serif`, '#ffffffe0', 2 * S);
+              const bw = drawText(ctx, 'SR', W - 30 * S, 29 * S, `${9 * S}px sans-serif`, '#ffffffe0', S, 'right');
+              ctx.strokeStyle = '#ffffff66'; ctx.strokeRect(W - 30 * S - bw - 5 * S, 19 * S, bw + 10 * S, 14 * S);
+            }
           }
           ctx.restore();
         }
@@ -874,25 +901,81 @@
       $('focusBtn').addEventListener('click', () => toggleFocus());
       $('navCollection').addEventListener('click', () => { $('collection').scrollIntoView({ behavior: reducedMotion.matches ? 'instant' : 'smooth' }); $('navCollection').classList.add('active'); $('navWorkshop').classList.remove('active'); });
       $('navWorkshop').addEventListener('click', () => { $('editor').scrollIntoView({ behavior: reducedMotion.matches ? 'instant' : 'smooth', block: 'start' }); $('navWorkshop').classList.add('active'); $('navCollection').classList.remove('active'); });
+      let flipUntil = 0;
+      function resetFlip() {
+        flipUntil = 0;
+        resetTilt();
+        const card = $('preview').querySelector('.collectible:not(.ghost)');
+        if (card) {
+          card.style.setProperty('--flip', '0deg');
+          card.querySelector('.card-front').setAttribute('aria-hidden', 'false');
+          card.querySelector('.card-back').setAttribute('aria-hidden', 'true');
+        }
+        $('flipBtn').setAttribute('aria-pressed', 'false');
+        $('flipBtn').querySelector('span').textContent = '翻看背面';
+      }
+      function flipCard() {
+        const card = $('preview').querySelector('.collectible:not(.ghost)');
+        if (!card || drag?.moved || anim) return;
+        const flipped = $('flipBtn').getAttribute('aria-pressed') !== 'true';
+        resetTilt();
+        card.style.setProperty('--flip', flipped ? '180deg' : '0deg');
+        card.querySelector('.card-front').setAttribute('aria-hidden', String(flipped));
+        card.querySelector('.card-back').setAttribute('aria-hidden', String(!flipped));
+        $('flipBtn').setAttribute('aria-pressed', String(flipped));
+        $('flipBtn').querySelector('span').textContent = flipped ? '回到正面' : '翻看背面';
+        layoutTrack(trackDx);
+        flipUntil = performance.now() + (reducedMotion.matches ? 0 : 650);
+      }
+      $('flipBtn').addEventListener('click', flipCard);
+      $('preview').addEventListener('dblclick', e => { if (e.target.closest('.collectible:not(.ghost)')) flipCard(); });
+      $('lightInput').addEventListener('change', e => {
+        $('stage').style.setProperty('--lamp', { warm: '#ffe3b2', neutral: '#ffffff', cool: '#afd9ff' }[e.target.value]);
+      });
       function onKey(e) {
-        if ($('deleteDialog').open || /INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)) return;
+        if (document.querySelector('dialog[open]') || /INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)) return;
         if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
         if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
       }
       window.addEventListener('keydown', e => { if (e.key === 'Escape') toggleFocus(false); onKey(e); });
+      const tilt = { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, raf: 0, time: 0 };
       function applyTilt(x, y) {
-        const card = $('preview').querySelector('.collectible');
-        if (!card || !current()?.tilt || reducedMotion.matches) return;
-        x = Math.max(-1, Math.min(1, x));
-        y = Math.max(-1, Math.min(1, y));
-        card.style.setProperty('--rx', `${-y * 11}deg`);
-        card.style.setProperty('--ry', `${x * 13}deg`);
-        card.style.setProperty('--mx', `${50 + x * 40}%`);
-        card.style.setProperty('--my', `${50 + y * 40}%`);
+        const card = $('preview').querySelector('.collectible:not(.ghost)');
+        if (!card || !current()?.tilt || reducedMotion.matches || document.hidden || performance.now() < flipUntil || anim || drag?.moved) return;
+        tilt.tx = Math.max(-1, Math.min(1, x));
+        tilt.ty = Math.max(-1, Math.min(1, y));
+        if (tilt.raf) return;
+        tilt.time = performance.now();
+        const frame = now => {
+          const dt = Math.min((now - tilt.time) / 1000, .032);
+          tilt.time = now;
+          for (const axis of ['x', 'y']) {
+            tilt['v' + axis] += ((tilt['t' + axis] - tilt[axis]) * 160 - tilt['v' + axis] * 21) * dt;
+            tilt[axis] += tilt['v' + axis] * dt;
+          }
+          card.style.transition = 'none';
+          card.style.setProperty('--rx', `${-tilt.y * 11}deg`);
+          card.style.setProperty('--ry', `${tilt.x * 13}deg`);
+          card.style.setProperty('--mx', `${50 + tilt.x * 40}%`);
+          card.style.setProperty('--my', `${50 + tilt.y * 40}%`);
+          card.style.setProperty('--shadow-x', `${-tilt.x * 16}px`);
+          card.style.setProperty('--shadow-y', `${24 - tilt.y * 10}px`);
+          $('stage').style.setProperty('--light-x', `${50 + tilt.x * 18}%`);
+          $('stage').style.setProperty('--light-y', `${35 + tilt.y * 12}%`);
+          const moving = Math.abs(tilt.tx - tilt.x) + Math.abs(tilt.ty - tilt.y) + Math.abs(tilt.vx) + Math.abs(tilt.vy) > .002;
+          tilt.raf = moving ? requestAnimationFrame(frame) : 0;
+          if (!moving) card.style.removeProperty('transition');
+        };
+        tilt.raf = requestAnimationFrame(frame);
       }
       function resetTilt() {
-        const card = $('preview').querySelector('.collectible');
-        if (card) ['--rx', '--ry', '--mx', '--my'].forEach(key => card.style.removeProperty(key));
+        cancelAnimationFrame(tilt.raf);
+        Object.assign(tilt, { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, raf: 0 });
+        $('preview').querySelectorAll('.collectible').forEach(card => {
+          ['--rx', '--ry', '--mx', '--my', '--shadow-x', '--shadow-y', 'transition'].forEach(key => card.style.removeProperty(key));
+        });
+        $('stage').style.removeProperty('--light-x');
+        $('stage').style.removeProperty('--light-y');
       }
       let motionEnabled = false, hasGyroData = false, gyroTimeout, baseline = null, orientationSeen = false;
       function handleMotion(e) {
@@ -984,9 +1067,11 @@
           if (keep.has(item.id)) return;
           keep.add(item.id);
           const el = cardFor(item), pos = o * gap + dx, t = Math.min(1, Math.abs(pos) / gap);
+          el.style.setProperty('--track-x', `${pos}px`);
+          el.style.setProperty('--track-scale', String(1 - .1 * t));
           if (o === 0) {
             el.classList.remove('ghost');
-            el.style.transform = `translateX(${pos}px) rotateX(var(--rx)) rotateY(var(--ry)) scale(${1 - .1 * t})`;
+            el.style.transform = `translateX(${pos}px) rotateX(var(--rx)) rotateY(calc(var(--ry) + var(--flip))) scale(${1 - .1 * t})`;
             el.style.opacity = '';
             el.style.zIndex = 5;
             if (preview.firstChild !== el) preview.prepend(el);
@@ -1009,6 +1094,7 @@
         if (items.length < 2) return false;
         const index = items.findIndex(item => item.id === selectedId);
         const target = items[(index + direction + items.length) % items.length];
+        resetFlip();
         selectedId = target.id;
         $('stage').style.setProperty('--ambient', target.color);
         syncEditor();
@@ -1031,6 +1117,7 @@
       function animateTo(target, velocity = 0) {
         stopAnim();
         if (layoutRaf) { cancelAnimationFrame(layoutRaf); layoutRaf = 0; }
+        if (reducedMotion.matches) { normalize(target); layoutTrack(0); preview.classList.remove('dragging'); return; }
         const from = trackDx, distance = target - from;
         const duration = Math.min(650, 240 + Math.abs(distance) / gapPx() * 110 - Math.min(80, Math.abs(velocity) * 40));
         preview.classList.add('dragging');
@@ -1048,8 +1135,23 @@
         };
         anim.raf = requestAnimationFrame(frame);
       }
+      function settleTrack() {
+        stopAnim();
+        if (layoutRaf) { cancelAnimationFrame(layoutRaf); layoutRaf = 0; }
+        if (drag && $('stage').hasPointerCapture(drag.id)) $('stage').releasePointerCapture(drag.id);
+        drag = null;
+        preview.classList.remove('dragging');
+        layoutTrack(0);
+      }
+      if (typeof ResizeObserver !== 'undefined') {
+        let trackWidth = 0;
+        new ResizeObserver(() => {
+          if (preview.offsetWidth !== trackWidth) { trackWidth = preview.offsetWidth; resetTilt(); settleTrack(); }
+        }).observe(preview);
+      }
+      $('physicsBtn').addEventListener('click', () => { stopMotion(); settleTrack(); });
       $('stage').addEventListener('pointerdown', e => {
-        if (e.target.closest('button') || items.length < 2) return;
+        if (e.button !== 0 || e.target.closest('button') || items.length < 2 || (drag && drag.id !== e.pointerId)) return;
         stopAnim();
         drag = { id: e.pointerId, startX: e.clientX - trackDx, startY: e.clientY, lastX: e.clientX, lastT: e.timeStamp, v: 0, moved: false };
         $('stage').setPointerCapture(e.pointerId);
@@ -1096,7 +1198,7 @@
       window.addEventListener('blur', () => { dragDepth = 0; $('dropOverlay').hidden = true; });
       document.addEventListener('visibilitychange', () => { if (document.hidden) { flushSaves(); stopMotion(); audio.pause(); } else if (musicWanted && current()?.music) tryPlay(); });
       window.addEventListener('beforeunload', e => { if (dirty.size || saving || importing) { flushSaves(); e.preventDefault(); e.returnValue = ''; } });
-      reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) { stopMotion(); resetTilt(); } });
+      reducedMotion.addEventListener('change', () => { if (reducedMotion.matches) { stopMotion(); settleTrack(); } });
       async function init() {
         try {
           db = await openDatabase();
@@ -1122,6 +1224,7 @@
         // Check if on mobile
         if (navigator.maxTouchPoints > 0) $('stage').classList.add('touch-ready');
       }
+      window.shiguang = Object.freeze({ getItems: () => items.map(item => ({ ...item })), createCard, showHint });
       $('stage').setAttribute('aria-busy', 'true');
       init();
       if ('serviceWorker' in navigator && window.isSecureContext) {
@@ -1129,5 +1232,6 @@
       }
     })();
   </script>
+  <script src="physics.js"></script>
 </body>
 </html>

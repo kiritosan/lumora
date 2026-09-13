@@ -1,5 +1,5 @@
-const CACHE = 'shiguang-v4';
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const CACHE = 'shiguang-v5';
+const ASSETS = ['./', './index.html', './museum.css', './physics.css', './physics.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));

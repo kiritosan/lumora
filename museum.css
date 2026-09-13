@@ -1,0 +1,63 @@
+.showcase { background: radial-gradient(ellipse at 50% 20%, #28232d55, transparent 65%), #15161e; }
+.stage { --lamp: #ffe3b2; --light-x: 50%; --light-y: 35%; }
+.stage::before { background: radial-gradient(ellipse at var(--light-x) var(--light-y), color-mix(in srgb, var(--ambient) 20%, transparent), transparent 65%); }
+.preview-wrap { flex-shrink: 0; }
+.collectible { --flip: 0deg; --shadow-x: 0px; --shadow-y: 24px; }
+.card-front, .card-back { position: absolute; inset: 0; border-radius: inherit; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.card-front { padding: inherit; transform: translateZ(2px); isolation: isolate; }
+.card-back { transform: rotateY(180deg) translateZ(2px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 26px; border: 3px solid var(--edge); background: repeating-linear-gradient(45deg, #ffffff03 0 1px, transparent 1px 9px), radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--edge) 22%, #191820), #15141b 75%); color: var(--edge); text-align: center; box-shadow: inset 0 0 0 5px #15141b, inset 0 0 0 6px #ffffff26; }
+.back-label, .back-foot { font-size: 7px; letter-spacing: 2px; opacity: .65; }
+.back-seal { display: flex; gap: 3px; align-items: center; justify-content: center; width: 78px; height: 78px; border: 1px solid var(--edge); border-radius: 50%; outline: 1px solid #ffffff15; outline-offset: 7px; font: 28px Georgia, "Songti SC", serif; transform: rotate(-8deg); }
+.back-seal span { align-self: flex-end; margin-bottom: 13px; font-size: 18px; }
+.back-title { max-width: 100%; font-size: 16px; font-weight: 400; letter-spacing: 3px; overflow-wrap: anywhere; }
+.back-detail { font-size: 8px; letter-spacing: 1px; opacity: .7; }
+.preview-wrap > .collectible { transform-style: preserve-3d; isolation: auto; backface-visibility: visible; transition: transform .65s cubic-bezier(.2,.75,.2,1), border-radius .3s; box-shadow: 1px 1px 0 #928697, 2px 2px 0 #403b47, 3px 3px 0 #8a808c, 4px 4px 0 #2a2730, var(--shadow-x) var(--shadow-y) 40px #0009, 0 0 0 1px #fff3; }
+.preview-wrap > .collectible.ghost, .preview-wrap.dragging > .collectible { transition: none; }
+.preview-wrap > .collectible.ghost .card-back { visibility: hidden; }
+.collectible[data-shape="square"] { aspect-ratio: 1; border-radius: 19px; }
+.collectible[data-shape="arch"] { border-radius: 50% 50% 14px 14px / 35.5% 35.5% 14px 14px; }
+[data-shape="arch"] .art-window, [data-shape="arch"] .card-decoration { border-radius: 50% 50% 9px 9px / 35.5% 35.5% 9px 9px; }
+[data-shape="arch"] .card-top { display: none; }
+.collectible[data-shape="polaroid"] { aspect-ratio: .82; padding: 13px 13px 57px; border-radius: 4px; background: linear-gradient(130deg, #f8f1e6, #cfc5b7); }
+[data-shape="polaroid"] .art-window { border-radius: 1px; }
+[data-shape="polaroid"] .card-decoration, [data-shape="polaroid"] .card-top, [data-shape="polaroid"] .card-caption small, [data-shape="polaroid"] .card-caption p { display: none; }
+[data-shape="polaroid"] .card-caption { bottom: 12px; left: 14px; right: 14px; padding: 0; background: none; color: #403b37; }
+[data-shape="polaroid"] .card-caption h3 { margin: 0; font: italic 18px Georgia, "Songti SC", serif; letter-spacing: 2px; text-align: center; }
+[data-shape="badge"] .card-back { gap: 10px; padding: 30px; }
+[data-shape="badge"] .back-seal { width: 58px; height: 58px; font-size: 22px; }
+[data-shape="badge"] .back-foot { display: none; }
+[data-shape="square"] .art-window { border-radius: 14px; }
+.gallery-light { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background: radial-gradient(ellipse at var(--mx) var(--my), var(--lamp, #ffe3b2), transparent 65%); mix-blend-mode: soft-light; opacity: calc(var(--shine) * .32); }
+[data-material="glass"] .finish { background-image: linear-gradient(115deg, transparent 25%, #ffffff99 26%, #ffffff0a 30%, transparent 48%, #a8ddec77 50%, transparent 56%, #fff4 78%, transparent 80%); mix-blend-mode: screen; }
+[data-material="glass"] .art-window { box-shadow: inset 0 0 0 2px #e4fcff88, inset 0 0 17px #d0f7ff66; }
+[data-material="glass"] .grain { opacity: .04; }
+[data-material="brushed"] .finish { background-image: repeating-linear-gradient(0deg, #fff2 0 .5px, #0002 .5px 1.5px), linear-gradient(110deg, #18212c88, #e9f3ffbb 35%, #48556355 48%, #ffffff99 65%, #10182088); mix-blend-mode: soft-light; }
+[data-material="silk"] .finish { background-image: repeating-linear-gradient(135deg, #160f2b66 0%, #b9aad422 16%, #ffe6f9aa 25%, #30213d55 36%, #eedce677 47%, #160f2b66 55%); mix-blend-mode: soft-light; background-size: 280% 280%; }
+[data-material="silk"] .grain { opacity: .08; }
+[data-material="prismatic"] .finish { background-image: conic-gradient(from 35deg at var(--mx) var(--my), #f9dfa433, #b0f7ed88, #ccbcfa55, #f4b9d188, #f9dfa433, #a9d9fa88, #f9dfa433); mix-blend-mode: color-dodge; background-size: 140% 140%; }
+[data-material="prismatic"] .grain { opacity: .1; }
+.swatch.glass { background: linear-gradient(115deg, #596a76 20%, #f1ffff 22%, #adced5 27%, #283b4c 50%, #e1fbff 54%, #6b94a6 60%); }
+.swatch.brushed { background: repeating-linear-gradient(0deg, #ffffff22 0 1px, #0001 1px 2px), linear-gradient(110deg, #36414a, #e0e5ec 40%, #64727f 60%, #ccd7df); }
+.swatch.silk { background: repeating-linear-gradient(130deg, #48354d, #bba2bb 22%, #f2d9e7 29%, #76627b 40%, #48354d 60%); }
+.swatch.prismatic { background: conic-gradient(from 35deg, #eddcaa, #9cdbcf, #b5a6d9, #e5b8cf, #eddcaa); }
+[aria-labelledby="shapeLabel"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[aria-labelledby="shapeLabel"] button { min-height: 33px; }
+.museum-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 15px 24px; border-top: 1px solid #ffffff09; background: #ffffff02; }
+.museum-actions { display: flex; gap: 8px; }
+.museum-actions .btn { min-height: 35px; padding: 0 11px; color: #d9cbb4; border-color: #d9cbb427; font-size: 11px; }
+.museum-actions .btn[aria-pressed="true"] { background: #d9cbb418; border-color: #d9cbb477; }
+.museum-actions .icon { width: 14px; }
+.light-control { display: flex; align-items: center; gap: 9px; color: #92909c; font-size: 10px; }
+.light-control select { width: auto; padding: 6px; font-size: 10px; }
+.filter-row { flex-wrap: wrap; }
+.thumbnail .card-back { display: none; }
+.thumbnail .collectible[data-shape="square"] { width: 108px; }
+.thumbnail .collectible[data-shape="polaroid"] { padding: 5px 5px 22px; }
+.thumbnail [data-shape="polaroid"] .card-caption { bottom: 6px; left: 6px; right: 6px; display: block; }
+.thumbnail [data-shape="polaroid"] .card-caption h3 { font-size: 7px; letter-spacing: 0; }
+.focus-mode .museum-controls { justify-content: center; background: #15161e; }
+@media (max-width: 800px) { .museum-controls { padding: 13px 14px; } }
+@media (max-width: 620px) { .stage-label { white-space: nowrap; } .stage-label span { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .preview-wrap > .collectible { transform: translateX(var(--track-x, 0px)) scale(var(--track-scale, 1)) rotateY(var(--flip)) !important; }
+}
