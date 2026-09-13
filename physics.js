@@ -77,7 +77,31 @@
     const sensorStatus = node('p', 'physics-sensor-status', '倾斜重力需设备支持；仅在你启用后读取，不保存传感器数据。');
     sensorStatus.id = 'physicsSensorStatus';
     sensorStatus.setAttribute('role', 'status');
+    const playControls = node('div', 'physics-play-controls');
+    const magnetLabel = node('label', 'physics-control');
+    const magnetMode = node('select');
+    magnetMode.id = 'physicsMagnetMode';
+    magnetLabel.htmlFor = magnetMode.id;
+    for (const [value, text] of [['off', '关闭'], ['attract', '吸引'], ['repel', '排斥']]) {
+      const option = node('option', '', text);
+      option.value = value;
+      magnetMode.append(option);
+    }
+    magnetLabel.append(node('span', '', '磁力'), magnetMode);
+    const magnetPulse = button('中心施力');
+    magnetPulse.id = 'physicsMagnetPulse';
+    magnetPulse.setAttribute('aria-describedby', 'physicsPlayHelp');
+    const shakeButton = button('轻摇一下');
+    shakeButton.id = 'physicsShake';
+    playControls.append(magnetLabel, magnetPulse, shakeButton);
+    const playHelp = node('p', 'physics-help', '选择磁力后按住展台空白处吸引／排斥，松手停止；也可点击「中心施力」。轻摇一下，让藏品重新跃动。');
+    playHelp.id = 'physicsPlayHelp';
+    const feedbackControls = node('div', 'physics-feedback-controls');
     const arena = node('div', 'physics-arena');
+    const field = node('div', 'physics-field');
+    field.hidden = true;
+    field.setAttribute('aria-hidden', 'true');
+    arena.append(field);
     arena.tabIndex = 0;
     arena.setAttribute('role', 'group');
     arena.setAttribute('aria-label', '藏品物理展台');
@@ -88,12 +112,14 @@
     help.id = 'physicsHelp';
     const model = node('p', 'physics-help', `本次展出 ${snapshot.length} / ${source.length} 件（最多前 8 件快照），不改动收藏。简化模型：徽章为圆形，其他形态为不旋转的矩形包围盒（含拱门空角）；质量按面积估算。`);
     model.id = 'physicsModel';
-    content.append(header, controls, sensorStatus, arena, readout, help, model);
+    content.append(header, controls, sensorStatus, playControls, feedbackControls, arena, readout, playHelp, help, model);
     dialog.append(content);
 
     const lifetime = new AbortController();
     const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: lifetime.signal });
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const feedback = window.createImpactFeedback({ arena, container: feedbackControls });
+    let magnet = null, lastShake = -Infinity;
     let active = true;
     let paused = motion.matches;
     let sleeping = false;
@@ -135,13 +161,16 @@
       element.setAttribute('aria-label', `${index + 1}. ${name}，${shapeName}，方向键移动，空格暂停或继续`);
       element.append(card);
       arena.append(element);
-      bodies.push({ element, card, name, circle, ratio: circle ? 1 : .71, w: 0, h: 0, x: 0, y: 0, vx: 0, vy: 0, mass: 1, invMass: 1 });
+      bodies.push({ element, card, name, circle, index, material: item.shape === 'polaroid' ? 'paper' : item.material, ratio: circle ? 1 : .71, w: 0, h: 0, x: 0, y: 0, vx: 0, vy: 0, mass: 1, invMass: 1 });
     });
 
     function updateReadout(note = '') {
       pauseButton.textContent = paused ? '继续' : '暂停';
       pauseButton.setAttribute('aria-pressed', String(paused));
       pauseButton.setAttribute('aria-label', paused ? '继续物理模拟' : '暂停物理模拟');
+      shakeButton.disabled = paused;
+      magnetPulse.disabled = paused || magnetMode.value === 'off';
+      arena.dataset.magnet = magnetMode.value;
       readout.textContent = `${paused ? '已暂停，可静态移动' : '模拟中'} · ${selected ? `已选：${selected.name}` : '选择一件藏品，感受重量与回弹'}${note ? ` · ${note}` : ''}`;
     }
 
@@ -167,6 +196,11 @@
       });
     }
 
+    function impact(body, key, speed, x, y) {
+      if (!active || paused || document.hidden || !dialog.open) return;
+      feedback.hit({ key, x, y, speed, material: body.material, index: body.index });
+    }
+
     function contain(body, bounce = true) {
       const minX = body.w / 2 + 2;
       const maxX = Math.max(minX, width - minX);
@@ -175,17 +209,29 @@
       const edgeBounce = value => bounce && Math.abs(value) > 45 ? -value * restitution : 0;
       if (body.x < minX) {
         body.x = minX;
-        if (body.vx < 0) { body.vx = edgeBounce(body.vx); body.vy *= .82; }
+        if (body.vx < 0) {
+          if (bounce) impact(body, `${body.index}:left`, -body.vx, 2, body.y);
+          body.vx = edgeBounce(body.vx); body.vy *= .82;
+        }
       } else if (body.x > maxX) {
         body.x = maxX;
-        if (body.vx > 0) { body.vx = edgeBounce(body.vx); body.vy *= .82; }
+        if (body.vx > 0) {
+          if (bounce) impact(body, `${body.index}:right`, body.vx, width - 2, body.y);
+          body.vx = edgeBounce(body.vx); body.vy *= .82;
+        }
       }
       if (body.y < minY) {
         body.y = minY;
-        if (body.vy < 0) { body.vy = edgeBounce(body.vy); body.vx *= .82; }
+        if (body.vy < 0) {
+          if (bounce) impact(body, `${body.index}:top`, -body.vy, body.x, 2);
+          body.vy = edgeBounce(body.vy); body.vx *= .82;
+        }
       } else if (body.y > maxY) {
         body.y = maxY;
-        if (body.vy > 0) { body.vy = edgeBounce(body.vy); body.vx *= .82; }
+        if (body.vy > 0) {
+          if (bounce) impact(body, `${body.index}:bottom`, body.vy, body.x, height - 2);
+          body.vy = edgeBounce(body.vy); body.vx *= .82;
+        }
       }
     }
 
@@ -239,6 +285,10 @@
       if (!impulses) return;
       const relative = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
       if (relative >= 0) return;
+      const x = a.circle ? a.x + nx * a.w / 2 : b.circle ? b.x - nx * b.w / 2 : (Math.max(a.x - a.w / 2, b.x - b.w / 2) + Math.min(a.x + a.w / 2, b.x + b.w / 2)) / 2;
+      const y = a.circle ? a.y + ny * a.h / 2 : b.circle ? b.y - ny * b.h / 2 : (Math.max(a.y - a.h / 2, b.y - b.h / 2) + Math.min(a.y + a.h / 2, b.y + b.h / 2)) / 2;
+      const body = Math.hypot(a.vx, a.vy) >= Math.hypot(b.vx, b.vy) ? a : b;
+      impact(body, `${a.index}:${b.index}`, -relative, x, y);
       const bounce = relative < -45 ? restitution : 0;
       const impulse = -(1 + bounce) * relative / inverse;
       a.vx -= impulse * nx * a.invMass;
@@ -282,7 +332,27 @@
       }
     }
 
+    function endMagnet() {
+      const previous = magnet;
+      magnet = null;
+      field.hidden = true;
+      if (previous?.id != null && arena.hasPointerCapture(previous.id)) arena.releasePointerCapture(previous.id);
+    }
+
+    function showField() {
+      if (!magnet) return;
+      field.hidden = false;
+      field.dataset.mode = magnetMode.value;
+      field.textContent = magnetMode.value === 'repel' ? '斥' : '吸';
+      field.style.left = `${magnet.x}px`;
+      field.style.top = `${magnet.y}px`;
+    }
+
     function integrate() {
+      if (magnet?.remaining != null) {
+        magnet.remaining -= stepSize;
+        if (magnet.remaining <= 0) endMagnet();
+      }
       const damping = Math.exp(-.62 * stepSize);
       let quiet = true;
       bodies.forEach(body => {
@@ -297,6 +367,14 @@
           body.vx += gx * stepSize;
           body.vy += gy * stepSize;
         }
+        if (magnet && drag?.body !== body) {
+          const dx = magnet.x - body.x, dy = magnet.y - body.y, distance = Math.hypot(dx, dy);
+          if (distance > .5) {
+            const force = (magnetMode.value === 'repel' ? -1 : 1) * 1600 * Math.min(1, distance / 32) / (1 + (distance / 260) ** 2) / Math.sqrt(body.mass);
+            body.vx += dx / distance * force * stepSize;
+            body.vy += dy / distance * force * stepSize;
+          }
+        }
         body.vx *= damping;
         body.vy *= damping;
         limitVelocity(body);
@@ -308,7 +386,7 @@
         limitVelocity(body);
         if (Math.hypot(body.vx, body.vy) > 7 || Math.hypot(body.x - body.previousX, body.y - body.previousY) > .15) quiet = false;
       });
-      idleTime = quiet && !drag ? idleTime + stepSize : 0;
+      idleTime = quiet && !drag && !magnet ? idleTime + stepSize : 0;
       if (idleTime > .65) {
         sleeping = true;
         bodies.forEach(body => { body.vx = 0; body.vy = 0; });
@@ -351,6 +429,8 @@
 
     function arrange(note = '') {
       endDrag(false);
+      endMagnet();
+      feedback.silence();
       width = arena.clientWidth;
       height = arena.clientHeight;
       if (!width || !height) return;
@@ -470,6 +550,8 @@
       paused = value;
       endDrag(false);
       if (paused) {
+        endMagnet();
+        feedback.silence();
         stopFrame();
         if (sensorState !== 'off') stopSensor('模拟已暂停，倾斜重力同时关闭；需要时可重新启用。');
       } else {
@@ -485,9 +567,21 @@
     }
 
     listen(arena, 'pointerdown', event => {
-      if (event.button !== 0 || !event.isPrimary || drag) return;
+      if (event.button !== 0 || !event.isPrimary || drag || magnet?.id != null) return;
       const body = bodies.find(value => value.element.contains(event.target));
-      if (!body) return;
+      endMagnet();
+      if (!body) {
+        if (paused || magnetMode.value === 'off') return;
+        event.preventDefault();
+        arena.focus({ preventScroll: true });
+        const point = pointerPosition(event);
+        magnet = { id: event.pointerId, x: clamp(point.x, 0, width), y: clamp(point.y, 0, height) };
+        try { arena.setPointerCapture(event.pointerId); } catch (error) { endMagnet(); return; }
+        showField();
+        updateReadout(magnetMode.value === 'repel' ? '磁力排斥中 · 松手停止' : '磁力吸引中 · 松手停止');
+        wake();
+        return;
+      }
       event.preventDefault();
       select(body);
       body.element.focus({ preventScroll: true });
@@ -506,6 +600,14 @@
     });
 
     listen(arena, 'pointermove', event => {
+      if (magnet?.id === event.pointerId) {
+        event.preventDefault();
+        const point = pointerPosition(event);
+        magnet.x = clamp(point.x, 0, width);
+        magnet.y = clamp(point.y, 0, height);
+        showField();
+        return;
+      }
       if (!drag || event.pointerId !== drag.id) return;
       event.preventDefault();
       const point = pointerPosition(event);
@@ -531,9 +633,12 @@
         render();
       } else wake();
     });
-    listen(arena, 'pointerup', event => { if (drag?.id === event.pointerId) endDrag(true); });
-    listen(arena, 'pointercancel', event => { if (drag?.id === event.pointerId) endDrag(false); });
-    listen(arena, 'lostpointercapture', event => { if (drag?.id === event.pointerId) endDrag(false); });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      listen(arena, type, event => {
+        if (magnet?.id === event.pointerId) { endMagnet(); updateReadout('磁力已松开'); }
+        if (drag?.id === event.pointerId) endDrag(type === 'pointerup');
+      });
+    }
     listen(arena, 'dragstart', event => event.preventDefault());
     listen(arena, 'focusin', event => {
       const body = bodies.find(value => value.element === event.target);
@@ -575,6 +680,30 @@
       render();
       wake();
     });
+    listen(magnetMode, 'change', () => { endMagnet(); updateReadout(magnetMode.value === 'off' ? '磁力已关闭' : '按住空白处施力，或点击中心施力'); });
+    listen(magnetPulse, 'click', () => {
+      if (paused || magnetMode.value === 'off') return;
+      endDrag(false);
+      endMagnet();
+      magnet = { id: null, x: width / 2, y: height / 2, remaining: .45 };
+      showField();
+      updateReadout(magnetMode.value === 'repel' ? '中心排斥脉冲' : '中心吸引脉冲');
+      wake();
+    });
+    listen(shakeButton, 'click', () => {
+      const now = performance.now();
+      if (paused || now - lastShake < 300) return;
+      lastShake = now;
+      endDrag(false);
+      endMagnet();
+      bodies.forEach(body => {
+        body.vx += (Math.random() - .5) * 420 / Math.sqrt(body.mass);
+        body.vy -= (200 + Math.random() * 170) / Math.sqrt(body.mass);
+        limitVelocity(body);
+      });
+      updateReadout('轻摇展台 · 让藏品自然落下');
+      wake();
+    });
     listen(resetButton, 'click', () => arrange('已重新摆放'));
     listen(pauseButton, 'click', () => setPaused(!paused));
     listen(closeButton, 'click', () => dialog.close());
@@ -593,11 +722,13 @@
     listen(document, 'visibilitychange', () => {
       if (document.hidden) {
         endDrag(false);
+        endMagnet();
+        feedback.silence();
         stopFrame();
         if (sensorState !== 'off') stopSensor('页面已隐藏，倾斜重力已关闭；返回后需主动重新启用。');
       } else wake();
     });
-    listen(window, 'blur', () => endDrag(false));
+    listen(window, 'blur', () => setPaused(true, '窗口已失去焦点，点击继续恢复'));
     const motionChange = event => {
       if (event.matches) setPaused(true, '已遵循系统减少动态效果设置');
     };
@@ -609,6 +740,8 @@
       if (!active) return;
       active = false;
       endDrag(false);
+      endMagnet();
+      feedback.destroy();
       stopFrame();
       stopSensor();
       resizeObserver?.disconnect();

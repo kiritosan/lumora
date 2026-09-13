@@ -39,6 +39,14 @@
 .physics-dialog :focus-visible { outline: 2px solid #e7c88f; outline-offset: 4px; }
 .physics-dialog .physics-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; margin: 20px 0 8px; padding-top: 16px; border-top: 1px solid #ffffff12; }
 .physics-dialog .physics-control { display: inline-flex; align-items: center; gap: 9px; min-height: 40px; color: #ddd1bf; }
+.physics-dialog .physics-play-controls, .physics-dialog .physics-feedback-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 12px; }
+.physics-dialog .physics-feedback-controls { padding: 10px 0 0; border-top: 1px solid #ffffff12; }
+.physics-dialog .physics-feedback-status { flex-basis: 100%; margin: 0; font-size: 11px; }
+.physics-dialog .physics-control select { width: auto; min-height: 36px; padding: 6px 10px; font: inherit; color: #eee3d0; background: #26231e; border-color: #625746; }
+.physics-arena[data-magnet="attract"], .physics-arena[data-magnet="repel"] { cursor: crosshair; }
+.physics-arena .physics-field { position: absolute; width: 94px; height: 94px; translate: -50% -50%; display: grid; place-items: center; border: 1px solid #e5c38b77; border-radius: 50%; color: #e5c38b; font-size: 13px; background: radial-gradient(circle, #e5c38b18, transparent 70%); box-shadow: 0 0 0 12px #e5c38b08; pointer-events: none; z-index: 2; }
+.physics-arena .physics-field[data-mode="repel"] { color: #a4e5da; border-color: #a4e5da88; background: radial-gradient(circle, #a4e5da18, transparent 70%); box-shadow: 0 0 0 12px #a4e5da08; }
+.physics-arena .physics-field[hidden] { display: none; }
 .physics-dialog input[type="checkbox"] { width: 18px; height: 18px; accent-color: #c5aa7e; }
 .physics-dialog input[type="range"] { width: 108px; min-height: 30px; accent-color: #c5aa7e; cursor: pointer; }
 .physics-dialog output { font-variant-numeric: tabular-nums; min-width: 33px; color: #e8c991; }

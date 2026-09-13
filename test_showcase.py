@@ -178,6 +178,9 @@ class ShowcaseTests(unittest.TestCase):
         self.page.locator('#physicsBtn').click()
         dialog = self.page.locator('.physics-dialog')
         self.assertEqual(dialog.get_by_role('button', name='继续物理模拟', exact=True).count(), 1)
+        self.assertTrue(dialog.locator('#impactGlow').is_disabled())
+        self.assertFalse(dialog.locator('#impactGlow').is_checked())
+        self.assertTrue(dialog.locator('#physicsShake').is_disabled())
         body = dialog.locator('.physics-body').first
         before = body.bounding_box()
         self.page.wait_for_timeout(400)
@@ -216,6 +219,115 @@ class ShowcaseTests(unittest.TestCase):
         dialog.get_by_role('button', name='启用倾斜重力', exact=True).click()
         self.page.wait_for_function('document.getElementById("physicsSensorStatus").textContent.includes("未获得")')
         self.assertEqual(dialog.get_by_role('button', name='启用倾斜重力', exact=True).get_attribute('aria-pressed'), 'false')
+
+    def test_magnet_shake_controls_and_pause(self):
+        self.page.locator('#physicsBtn').click()
+        dialog = self.page.locator('.physics-dialog')
+        mode = dialog.locator('#physicsMagnetMode')
+        mode.wait_for(timeout=1500)
+        self.assertEqual(mode.input_value(), 'off')
+        self.assertEqual(dialog.locator('#impactSoundMode').input_value(), 'off')
+        self.assertTrue(dialog.locator('#physicsMagnetPulse').is_disabled())
+        dialog.get_by_role('checkbox', name='重力', exact=True).uncheck()
+        arena = dialog.locator('.physics-arena')
+        body = dialog.locator('.physics-body').first
+        for magnet_mode in ['attract', 'repel']:
+            mode.select_option(magnet_mode)
+            dialog.get_by_role('button', name='重新摆放', exact=True).click()
+            arena.scroll_into_view_if_needed()
+            area = arena.bounding_box()
+            x, y = area['x'] + area['width'] / 2, area['y'] + area['height'] / 2
+            before = body.bounding_box()
+            distance = lambda box: ((box['x'] + box['width'] / 2 - x) ** 2 + (box['y'] + box['height'] / 2 - y) ** 2) ** .5
+            self.page.mouse.move(x, y)
+            self.page.mouse.down()
+            self.page.wait_for_timeout(300)
+            after = body.bounding_box()
+            self.assertTrue(dialog.locator('.physics-field').is_visible())
+            self.page.mouse.up()
+            self.assertFalse(dialog.locator('.physics-field').is_visible())
+            if magnet_mode == 'attract':
+                self.assertLess(distance(after), distance(before) - 5)
+            else:
+                self.assertGreater(distance(after), distance(before) + 5)
+        dialog.get_by_role('button', name='重新摆放', exact=True).click()
+        before = body.bounding_box()
+        dialog.locator('#physicsShake').click()
+        self.page.wait_for_timeout(180)
+        self.assertNotEqual(body.bounding_box(), before)
+        dialog.locator('#physicsMagnetPulse').click()
+        self.assertTrue(dialog.locator('.physics-field').is_visible())
+        dialog.get_by_role('button', name='暂停物理模拟', exact=True).click()
+        self.assertFalse(dialog.locator('.physics-field').is_visible())
+        self.assertTrue(dialog.locator('#physicsMagnetPulse').is_disabled())
+        self.assertTrue(dialog.locator('#physicsShake').is_disabled())
+        self.assertEqual(dialog.locator('.physics-impact-glow').count(), 0)
+
+    def test_collision_audio_glow_and_cleanup(self):
+        self.page.evaluate('''() => {
+            const NativeAudio = window.AudioContext;
+            window.audioProbe = { contexts: [], masters: [], starts: 0, glows: 0, maxGlows: 0 };
+            window.AudioContext = class extends NativeAudio {
+                constructor(...args) { super(...args); audioProbe.contexts.push(this); this.firstGain = true; }
+                createGain() { const gain = super.createGain(); if (this.firstGain) { audioProbe.masters.push(gain); this.firstGain = false; } return gain; }
+                createOscillator() { const source = super.createOscillator(); const start = source.start.bind(source); source.start = (...args) => { audioProbe.starts++; return start(...args); }; return source; }
+            };
+            new MutationObserver(records => {
+                for (const record of records) for (const el of record.addedNodes) if (el.nodeType === 1 && el.matches('.physics-impact-glow')) audioProbe.glows++;
+                audioProbe.maxGlows = Math.max(audioProbe.maxGlows, document.querySelectorAll('.physics-impact-glow').length);
+            }).observe(document.body, { childList: true, subtree: true });
+        }''')
+        self.page.locator('#physicsBtn').click()
+        dialog = self.page.locator('.physics-dialog')
+        self.assertEqual(self.page.evaluate('audioProbe.contexts.length'), 0)
+        sound = dialog.locator('#impactSoundMode')
+        sound.select_option('material')
+        self.page.wait_for_function('document.getElementById("impactFeedbackStatus").textContent.includes("材质音已开启")')
+        self.assertEqual(self.page.evaluate('audioProbe.contexts.length'), 1)
+        self.page.evaluate('''() => {
+            audioProbe.analyser = audioProbe.contexts[0].createAnalyser();
+            audioProbe.masters[0].connect(audioProbe.analyser);
+        }''')
+        measure = '''() => new Promise(resolve => {
+            const start = performance.now(), data = new Float32Array(2048);
+            let peak = 0;
+            function frame() {
+                audioProbe.analyser.getFloatTimeDomainData(data);
+                for (const value of data) peak = Math.max(peak, Math.abs(value));
+                if (performance.now() - start > 1500) resolve(peak); else requestAnimationFrame(frame);
+            }
+            frame();
+        })'''
+        for mode in ['material', 'music']:
+            sound.select_option(mode)
+            self.page.wait_for_function('document.getElementById("impactSoundMode").value !== "off" && !document.getElementById("impactFeedbackStatus").textContent.includes("正在启用")')
+            dialog.get_by_role('button', name='重新摆放', exact=True).click()
+            peak = self.page.evaluate(measure)
+            self.assertGreater(peak, .00001)
+            self.assertLess(peak, .2)
+        self.assertGreater(self.page.evaluate('audioProbe.glows'), 0)
+        self.assertLessEqual(self.page.evaluate('audioProbe.maxGlows'), 6)
+        self.page.evaluate('''() => {
+            const volume = document.getElementById('impactVolume');
+            volume.value = '0'; volume.dispatchEvent(new Event('input', { bubbles: true }));
+        }''')
+        starts = self.page.evaluate('audioProbe.starts')
+        dialog.get_by_role('button', name='重新摆放', exact=True).click()
+        self.page.wait_for_timeout(1300)
+        self.assertEqual(self.page.evaluate('audioProbe.starts'), starts)
+        dialog.locator('#impactGlow').uncheck()
+        self.assertEqual(dialog.locator('.physics-impact-glow').count(), 0)
+        sound.select_option('off')
+        dialog.get_by_role('button', name='关闭物理把玩', exact=True).click()
+        self.page.wait_for_selector('.physics-dialog', state='detached')
+        self.page.wait_for_function('audioProbe.contexts.every(context => context.state === "closed")')
+        self.page.locator('#physicsBtn').click()
+        self.assertEqual(self.page.locator('#impactSoundMode').input_value(), 'off')
+        self.assertEqual(self.page.evaluate('audioProbe.contexts.length'), 1)
+        self.page.evaluate('window.AudioContext = undefined; window.webkitAudioContext = undefined')
+        self.page.locator('#impactSoundMode').select_option('material')
+        self.page.wait_for_function('document.getElementById("impactFeedbackStatus").textContent.includes("不支持")')
+        self.assertEqual(self.page.locator('#impactSoundMode').input_value(), 'off')
 
     def test_offline_assets_include_museum_and_physics(self):
         self.page.evaluate('navigator.serviceWorker.ready.then(() => true)')
