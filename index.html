@@ -78,9 +78,9 @@
     .stage-note { position: absolute; left: 25px; top: 37%; color: #6b6b7c; font-size: 9px; line-height: 2; letter-spacing: 2px; writing-mode: vertical-rl; }
     .edition { position: absolute; right: 25px; top: 40px; text-align: right; font-size: 9px; color: #737180; letter-spacing: 2px; }
     .edition strong { display: block; color: #aaa4b8; font: italic 24px Georgia, serif; margin-top: 2px; letter-spacing: 0; }
-    .preview-wrap { --dx: 0px; --gap: 112%; width: 272px; perspective: 1000px; position: relative; margin: 23px 0 32px; }
+    .preview-wrap { --dx: 0px; --gap: 112%; width: 272px; aspect-ratio: .71; perspective: 1000px; position: relative; margin: 23px 0 32px; display: grid; align-content: center; }
     .preview-wrap > .collectible { will-change: transform; backface-visibility: hidden; }
-    .preview-wrap > .collectible.ghost { position: absolute; top: 0; left: 0; pointer-events: none; transition: none; }
+    .preview-wrap > .collectible.ghost { position: absolute; top: 50%; left: 0; translate: 0 -50%; pointer-events: none; transition: none; }
     .preview-wrap.dragging > .collectible { transition: none; }
     .preview-wrap::after { content: ''; position: absolute; left: 7%; right: 7%; bottom: -28px; height: 20px; background: #0008; filter: blur(13px); z-index: -1; border-radius: 50%; }
     .collectible { --edge: #d9c2ee; --shine: .55; --mx: 50%; --my: 35%; --rx: 0deg; --ry: 0deg; --zoom: 1; --px: 50%; --py: 50%; position: relative; width: 100%; aspect-ratio: .71; border-radius: 15px; padding: 5px; background: linear-gradient(145deg, #fff9, var(--edge) 22%, #292732 48%, var(--edge) 76%, #fff9); box-shadow: 0 22px 45px #0007, 0 0 0 1px #fff2, inset 0 0 0 1px #fff4; transform: rotateX(var(--rx)) rotateY(var(--ry)); transition: transform .16s ease-out, border-radius .3s; isolation: isolate; }
