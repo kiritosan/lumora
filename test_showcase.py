@@ -1,5 +1,6 @@
 import functools
 import http.server
+import json
 import threading
 import unittest
 from pathlib import Path
@@ -328,6 +329,58 @@ class ShowcaseTests(unittest.TestCase):
         self.page.locator('#impactSoundMode').select_option('material')
         self.page.wait_for_function('document.getElementById("impactFeedbackStatus").textContent.includes("不支持")')
         self.assertEqual(self.page.locator('#impactSoundMode').input_value(), 'off')
+
+    def test_cloud_sync_push_pull_and_backup(self):
+        pulled = {'rows': []}
+        pushed = []
+        def handle(route):
+            request = route.request
+            if request.method == 'GET':
+                route.fulfill(status=200, content_type='application/json', body=json.dumps(pulled['rows']))
+            else:
+                pushed.extend(json.loads(request.post_data))
+                route.fulfill(status=201, content_type='application/json', body='[]')
+        self.page.route('**/rest/v1/shiguang_items**', handle)
+        self.page.locator('#cloudBtn').click()
+        dialog = self.page.locator('#syncDialog')
+        self.assertTrue(dialog.is_visible())
+        self.assertTrue(dialog.locator('#syncNowBtn').is_disabled())
+        self.page.locator('#syncConnect').click()
+        self.page.wait_for_selector('.toast.visible')
+        dialog.locator('#syncUrl').fill('https://demo.supabase.co')
+        dialog.locator('#syncAnon').fill('a' * 30)
+        dialog.locator('#syncGenerate').click()
+        self.assertGreaterEqual(len(dialog.locator('#syncKey').input_value()), 8)
+        self.page.locator('#syncConnect').click()
+        self.page.wait_for_function('document.getElementById("syncStatus").textContent.includes("同步完成")')
+        self.assertFalse(dialog.locator('#syncNowBtn').is_disabled())
+        dialog.locator('#closeSync').click()
+        title = self.page.locator('#titleInput')
+        title.fill('云端测试藏品')
+        title.dispatch_event('change')
+        for _ in range(80):
+            if pushed:
+                break
+            self.page.wait_for_timeout(100)
+        self.assertTrue(pushed)
+        self.assertFalse(any(row['deleted'] for row in pushed))
+        self.assertTrue(all(row['id'] != '__meta__' for row in pushed))
+        pulled['rows'] = [{'id': 'remote-1', 'updated': 4102444800000, 'deleted': False,
+            'data': {'v': 1, 'enc': 'none', 'json': json.dumps({'id': 'remote-1', 'title': '远处来的藏品', 'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'created': 4102444800000, 'updated': 4102444800000})}}]
+        self.page.locator('#cloudBtn').click()
+        dialog.locator('#syncNowBtn').click()
+        self.page.wait_for_function('document.getElementById("syncStatus").textContent.includes("更新")')
+        dialog.locator('#closeSync').click()
+        self.assertTrue(self.page.locator('.collection-item', has_text='远处来的藏品').count() > 0)
+        self.page.locator('#cloudBtn').click()
+        with self.page.expect_download() as download:
+            dialog.locator('#backupExport').click()
+        path = download.value.path()
+        payload = json.loads(Path(path).read_text(encoding='utf-8'))
+        self.assertEqual(payload['app'], 'shiguang')
+        self.assertTrue(any(item['title'] == '远处来的藏品' for item in payload['items']))
+        dialog.locator('#syncDisconnect').click()
+        self.assertTrue(dialog.locator('#syncNowBtn').is_disabled())
 
     def test_offline_assets_include_museum_and_physics(self):
         self.page.evaluate('navigator.serviceWorker.ready.then(() => true)')

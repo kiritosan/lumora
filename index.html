@@ -221,6 +221,15 @@
     dialog h2 { font-size: 18px; font-weight: 500; }
     dialog p { color: #a2a3b3; font-size: 12px; margin: 12px 0 24px; overflow-wrap: anywhere; }
     dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .sync-form { display: flex; flex-direction: column; gap: 13px; margin-bottom: 19px; }
+    .sync-form > label { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #b9b4c6; }
+    .sync-key-row { display: flex; gap: 8px; align-items: center; }
+    .sync-note { margin: 0 !important; font-size: 10px !important; color: #8d8a9a !important; }
+    .sync-status { margin: 0 !important; font-size: 11px !important; color: #c8b8d8 !important; }
+    .sync-status.error { color: #e8a0a0 !important; }
+    .sync-actions { flex-wrap: wrap; }
+    .icon-btn[data-blink] { animation: syncBlink 1.2s ease-in-out infinite; }
+    @keyframes syncBlink { 50% { opacity: .45; } }
     .focus-mode .topbar, .focus-mode .intro, .focus-mode .editor, .focus-mode .collection, .focus-mode footer { display: none; }
     .focus-mode main { max-width: none; padding: 16px; }
     .focus-mode .workspace { display: block; }
@@ -253,6 +262,7 @@
     <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2M3 8 1 12l2 4m18-8 2 4-2 4"/></symbol>
     <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M6.5 19a4.5 4.5 0 0 1-.4-8.98 6 6 0 0 1 11.7-1.4A4.7 4.7 0 0 1 17.5 19Z"/><path d="M12 12v6m0-6-2.2 2.2M12 12l2.2 2.2"/></symbol>
   </defs></svg>
   <header class="topbar">
     <div class="brand"><span class="brand-mark"><svg class="icon"><use href="#i-spark"/></svg></span><strong>拾光</strong><small>COLLECTION</small></div>
@@ -266,7 +276,7 @@
     </section>
     <div class="workspace">
       <section class="showcase" aria-label="藏品实时预览">
-        <div class="stage-toolbar"><div class="stage-label"><svg class="icon"><use href="#i-spark"/></svg>珍藏展台 <span>THE SHOWCASE</span></div><div class="stage-tools"><button class="icon-btn" id="favoriteBtn" aria-label="心动收藏" title="心动收藏" aria-pressed="false"><svg class="icon"><use href="#i-heart"/></svg></button><button class="icon-btn" id="exportBtn" aria-label="导出卡片图片" title="导出卡片图片"><svg class="icon"><use href="#i-download"/></svg></button><button class="icon-btn" id="musicBtn" aria-label="播放背景音乐" title="播放背景音乐" aria-pressed="false" hidden><svg class="icon"><use href="#i-music"/></svg></button><button class="icon-btn" id="enableMotion" aria-label="开启陀螺仪" title="开启陀螺仪" aria-pressed="false"><svg class="icon"><use href="#i-phone"/></svg></button><button class="icon-btn" id="focusBtn" aria-label="沉浸展示" title="沉浸展示 · Esc 退出" aria-pressed="false"><svg class="icon"><use href="#i-expand"/></svg></button></div></div>
+        <div class="stage-toolbar"><div class="stage-label"><svg class="icon"><use href="#i-spark"/></svg>珍藏展台 <span>THE SHOWCASE</span></div><div class="stage-tools"><button class="icon-btn" id="favoriteBtn" aria-label="心动收藏" title="心动收藏" aria-pressed="false"><svg class="icon"><use href="#i-heart"/></svg></button><button class="icon-btn" id="exportBtn" aria-label="导出卡片图片" title="导出卡片图片"><svg class="icon"><use href="#i-download"/></svg></button><button class="icon-btn" id="musicBtn" aria-label="播放背景音乐" title="播放背景音乐" aria-pressed="false" hidden><svg class="icon"><use href="#i-music"/></svg></button><button class="icon-btn" id="enableMotion" aria-label="开启陀螺仪" title="开启陀螺仪" aria-pressed="false"><svg class="icon"><use href="#i-phone"/></svg></button><button class="icon-btn" id="focusBtn" aria-label="沉浸展示" title="沉浸展示 · Esc 退出" aria-pressed="false"><svg class="icon"><use href="#i-expand"/></svg></button><button class="icon-btn" id="cloudBtn" aria-label="云同步与备份" title="云同步与备份"><svg class="icon"><use href="#i-cloud"/></svg></button></div></div>
         <div class="stage" id="stage"><span class="stage-note">MADE OF MOMENTS · KEPT FOREVER</span><div class="edition">PERSONAL EDITION<strong id="editionNumber">No. 001</strong></div><div class="orbit"></div><div class="preview-wrap" id="preview"></div><div class="stage-empty" id="stageEmpty" hidden><h3>下一份心动，由你定义</h3><p>上传喜欢的图片，开启你的收藏集。</p><button class="btn primary" data-upload>添加第一件藏品</button></div></div>
         <div class="stage-footer"><div class="current-info"><h2><span id="currentTitle">正在准备展台</span><span class="pill" id="currentMaterial">镭射典藏</span></h2><p id="currentDescription">每一份热爱，都值得被珍藏</p></div><div class="pagination"><button class="icon-btn" id="prevBtn" aria-label="上一件"><svg class="icon"><use href="#i-left"/></svg></button><span id="pageNumber">01 / 04</span><button class="icon-btn" id="nextBtn" aria-label="下一件"><svg class="icon"><use href="#i-right"/></svg></button></div></div>
         <div class="museum-controls"><div class="museum-actions"><button class="btn" id="flipBtn" type="button" aria-pressed="false" disabled><svg class="icon"><use href="#i-reset"/></svg><span>翻看背面</span></button><button class="btn" id="physicsBtn" type="button" disabled><svg class="icon"><use href="#i-mouse"/></svg>物理把玩</button></div><label class="light-control" for="lightInput">展灯温度 <select id="lightInput"><option value="warm">暖金展灯</option><option value="neutral">自然柔光</option><option value="cool">冷月映照</option></select></label></div>
@@ -295,6 +305,30 @@
   <div class="drop-overlay" id="dropOverlay" hidden><h2>松手，收藏这一份喜欢</h2><p>支持 PNG / JPG / WebP / GIF / AVIF · 每张最大 20 MB</p></div>
   <dialog id="exportDialog" aria-labelledby="exportHeading"><h2 id="exportHeading">卡片已生成</h2><img class="export-preview" id="exportPreview" alt="卡片导出预览"><p>导出为正面静态藏品图，保留造型与材质；动态光影以固定角度呈现。手机可长按保存，或使用下方按钮。</p><div class="dialog-actions"><button class="btn" id="closeExport">关闭</button><button class="btn" id="shareExport" hidden>分享 / 保存</button><a class="btn primary" id="downloadExport" download="card.png">下载 PNG</a></div></dialog>
   <dialog id="deleteDialog" aria-labelledby="deleteHeading"><h2 id="deleteHeading">移除这件藏品？</h2><p id="deleteMessage"></p><div class="dialog-actions"><button class="btn" id="cancelDelete">再想想</button><button class="btn primary" id="confirmDelete">确认移除</button></div></dialog>
+  <dialog id="syncDialog" aria-labelledby="syncHeading">
+    <h2 id="syncHeading">云同步与备份</h2>
+    <p id="syncDescription">把收藏集同步到你的 Supabase 项目，其他设备填入同样的地址、密钥即可看到同一份收藏。图片与音乐会随藏品一起同步。</p>
+    <div class="sync-form">
+      <label>项目地址<input class="text-input" id="syncUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false"></label>
+      <label>anon 密钥<input class="text-input" id="syncAnon" type="password" placeholder="eyJhbGciOi…" autocomplete="off" spellcheck="false"></label>
+      <label>同步密钥
+        <span class="sync-key-row"><input class="text-input" id="syncKey" type="password" placeholder="用于识别你的收藏集" autocomplete="off" spellcheck="false"><button class="icon-btn" id="syncKeyReveal" aria-label="显示密钥" title="显示 / 隐藏密钥"><svg class="icon"><use href="#i-expand"/></svg></button></span>
+      </label>
+      <p class="sync-note" id="syncNote">同步密钥即访问口令，请妥善保管；拿到密钥的设备可以读写收藏集。</p>
+      <p class="sync-status" id="syncStatus" role="status">尚未配置云同步</p>
+    </div>
+    <div class="dialog-actions sync-actions">
+      <button class="btn" id="syncGenerate">生成密钥</button>
+      <button class="btn" id="syncNowBtn" disabled>立即同步</button>
+      <button class="btn" id="syncDisconnect" hidden>断开</button>
+      <button class="btn" id="backupExport">导出收藏集</button>
+      <button class="btn" id="backupImport">导入收藏集</button>
+      <button class="btn primary" id="syncConnect">保存并连接</button>
+      <button class="btn" id="closeSync">关闭</button>
+    </div>
+    <input type="file" id="backupInput" accept="application/json,.json" hidden>
+  </dialog>
+  <script src="cloud.js"></script>
   <script>
     (function() {
       'use strict';
@@ -363,10 +397,12 @@
         $('editorStatus').textContent = text;
       }
       function queueSave(item) {
+        item.updated = Date.now();
         dirty.set(item.id, { ...item });
         setSaveStatus(db ? '有更改 · 正在保存…' : '临时模式 · 刷新后更改会丢失');
         clearTimeout(saveTimer);
         saveTimer = setTimeout(flushSaves, 350);
+        window.shiguangCloud?.notifyChange(item);
       }
       function flushSaves() {
         clearTimeout(saveTimer);
@@ -879,6 +915,7 @@
           await flushSaves();
           dirty.delete(id);
           if (db) await transact(store => store.delete(id));
+          window.shiguangCloud?.notifyDelete(id);
           const index = items.findIndex(item => item.id === id);
           items = items.filter(item => item.id !== id);
           if (selectedId === id) selectItem(items[Math.min(index, items.length - 1)]?.id || null);
@@ -1225,6 +1262,116 @@
         if (navigator.maxTouchPoints > 0) $('stage').classList.add('touch-ready');
       }
       window.shiguang = Object.freeze({ getItems: () => items.map(item => ({ ...item })), createCard, showHint });
+      // ---- 云同步与备份 ----
+      function refreshSyncUI() {
+        const cfg = window.shiguangCloud?.getConfig();
+        $('syncUrl').value = cfg?.url || '';
+        $('syncAnon').value = cfg?.anon || '';
+        $('syncKey').value = cfg?.key || '';
+        $('syncNowBtn').disabled = !cfg;
+        $('syncDisconnect').hidden = !cfg;
+        if (cfg) $('syncStatus').textContent = cfg.lastSync ? `已连接 · 上次同步 ${new Date(cfg.lastSync).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : '已连接 · 尚未同步';
+        else $('syncStatus').textContent = '尚未配置云同步';
+        $('syncStatus').classList.remove('error');
+      }
+      function upsertLocal(remote) {
+        const item = { ...defaults, ...remote };
+        const index = items.findIndex(value => value.id === item.id);
+        if (index >= 0) items[index] = item; else items.unshift(item);
+        items.sort((a, b) => b.created - a.created);
+        dirty.delete(item.id);
+        if (db) transact(store => store.put(item)).catch(() => {});
+        renderCollection();
+        selectItem(selectedId === item.id || !selectedId ? item.id : selectedId);
+      }
+      function removeLocal(id) {
+        const index = items.findIndex(value => value.id === id);
+        if (index < 0) return;
+        dirty.delete(id);
+        if (db) transact(store => store.delete(id)).catch(() => {});
+        items = items.filter(value => value.id !== id);
+        if (selectedId === id) selectItem(items[Math.min(index, items.length - 1)]?.id || null);
+        renderCollection();
+      }
+      const LIGHT_COLORS = { warm: '#ffe3b2', neutral: '#ffffff', cool: '#afd9ff' };
+      $('lightInput').addEventListener('change', () => {
+        const light = $('lightInput').value;
+        localStorage.setItem('shiguang.light', light);
+        window.shiguangCloud?.notifyMeta({ light });
+      });
+      $('cloudBtn').addEventListener('click', () => { refreshSyncUI(); $('syncDialog').showModal(); });
+      $('closeSync').addEventListener('click', () => $('syncDialog').close());
+      $('syncKeyReveal').addEventListener('click', () => { $('syncKey').type = $('syncKey').type === 'password' ? 'text' : 'password'; });
+      $('syncGenerate').addEventListener('click', () => { $('syncKey').value = window.shiguangCloud.generateKey(); $('syncKey').type = 'text'; });
+      $('syncConnect').addEventListener('click', () => {
+        const url = $('syncUrl').value.trim(), anon = $('syncAnon').value.trim(), key = $('syncKey').value.trim();
+        if (!/^https:\/\/[\w.-]+\.supabase\.co\/?$/.test(url)) return showHint('请填写形如 https://xxxx.supabase.co 的项目地址');
+        if (!anon || anon.length < 20) return showHint('请填写 anon 密钥');
+        if (key.length < 8) return showHint('同步密钥至少 8 位，可点击「生成密钥」');
+        window.shiguangCloud.setConfig({ url, anon, key });
+        refreshSyncUI();
+        showHint('已连接云端，正在同步…');
+      });
+      $('syncNowBtn').addEventListener('click', () => window.shiguangCloud.syncNow());
+      $('syncDisconnect').addEventListener('click', () => { window.shiguangCloud.disconnect(); refreshSyncUI(); });
+      $('backupExport').addEventListener('click', () => {
+        if (!items.length) return showHint('还没有可导出的藏品');
+        const payload = { app: 'shiguang', version: 1, exportedAt: Date.now(), items: items.map(item => ({ ...item })) };
+        const url = URL.createObjectURL(new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `拾光收藏-${new Date().toISOString().slice(0, 10)}.json`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        showHint('已导出收藏集备份，包含全部图片与设置');
+      });
+      $('backupImport').addEventListener('click', () => $('backupInput').click());
+      $('backupInput').addEventListener('change', async () => {
+        const file = $('backupInput').files[0];
+        $('backupInput').value = '';
+        if (!file) return;
+        try {
+          const payload = JSON.parse(await file.text());
+          const list = Array.isArray(payload) ? payload : payload.items;
+          if (!Array.isArray(list)) throw new Error('格式不符');
+          let added = 0, replaced = 0;
+          for (const raw of list) {
+            if (!raw || typeof raw.id !== 'string' || typeof raw.image !== 'string' || !raw.image.startsWith('data:')) continue;
+            const item = { ...defaults, ...raw, updated: raw.updated || raw.created || Date.now() };
+            const index = items.findIndex(value => value.id === item.id);
+            if (index >= 0) {
+              if (item.updated <= (items[index].updated || items[index].created || 0)) continue;
+              items[index] = item;
+              replaced++;
+            } else { items.unshift(item); added++; }
+            if (db) await transact(store => store.put(item));
+            window.shiguangCloud?.notifyChange(item);
+          }
+          items.sort((a, b) => b.created - a.created);
+          renderCollection();
+          selectItem(selectedId || items[0]?.id || null);
+          showHint(added + replaced ? `已导入 ${added + replaced} 件藏品（新增 ${added}，更新 ${replaced}）` : '备份中的藏品都已存在，无需导入');
+        } catch (error) { showHint('导入失败：这不是有效的收藏集备份文件'); }
+      });
+      window.shiguangCloud?.init({
+        getItem: id => items.find(item => item.id === id),
+        upsertLocal,
+        removeLocal,
+        applyMeta(meta) {
+          if (meta?.light && LIGHT_COLORS[meta.light]) {
+            $('lightInput').value = meta.light;
+            $('stage').style.setProperty('--lamp', LIGHT_COLORS[meta.light]);
+            localStorage.setItem('shiguang.light', meta.light);
+          }
+        },
+        onStatus(text, tone) {
+          $('syncStatus').textContent = text;
+          $('syncStatus').classList.toggle('error', tone === 'error');
+          if (tone === 'error' && !$('syncDialog').open) showHint(text);
+        }
+      });
+      const savedLight = localStorage.getItem('shiguang.light');
+      if (savedLight && LIGHT_COLORS[savedLight]) { $('lightInput').value = savedLight; $('stage').style.setProperty('--lamp', LIGHT_COLORS[savedLight]); }
       $('stage').setAttribute('aria-busy', 'true');
       init();
       if ('serviceWorker' in navigator && window.isSecureContext) {
