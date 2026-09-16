@@ -78,7 +78,15 @@
   }
   async function request(path, options = {}) {
     const res = await fetch(endpoint() + path, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
-    if (!res.ok) throw new Error(`云端响应 ${res.status}`);
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const body = await res.json();
+        detail = body.message || body.hint || body.details || '';
+      } catch (error) {}
+      const hint = { 401: '（anon 密钥不正确，请核对 Project Settings → API Keys）', 404: '（表不存在，请先在 SQL Editor 运行 supabase-setup.sql）', 403: '（权限不足）' }[res.status] || '';
+      throw new Error(`云端响应 ${res.status}${detail ? `：${detail}` : hint}`);
+    }
     return res;
   }
 
