@@ -7,4 +7,6 @@
     <string name="widget_wide_name">拾光 · 光景</string>
     <string name="widget_compact_desc">一格光景，轻触进入藏品，下一件可在桌面切换。</string>
     <string name="widget_wide_desc">横向光桌，在桌面浏览藏品与展签。</string>
+    <string name="widget_next_desc">浏览下一件藏品</string>
+    <string name="widget_brand">LUMORA / 藏馆</string>
 </resources>

@@ -149,7 +149,7 @@ public final class ProfilePanel extends FrameLayout {
                 + "分享图片经系统分享面板发出后才离开本机。当前版本不含网页版藏品的自动迁移与云端同步。",
             13f, Ui.INK_SOFT));
         root.addView(Ui.spacer(ctx, 24));
-        root.addView(Ui.text(ctx, "Lumora · 拾光 1.1 · 留住日常的光", 11f, Ui.MUTED));
+        root.addView(Ui.text(ctx, "Lumora · 拾光 1.2 · 留住日常的光", 11f, Ui.MUTED));
     }
 
     private static TextView metric(Context ctx, LinearLayout row, String label) {

@@ -37,6 +37,10 @@ public final class HomePanel extends ScrollView {
         void onRequestAdd();
 
         void onOpenStage();
+
+        default void onEdit(Item item) { }
+        default void onToggleFavorite(Item item) { }
+        default void onShare(Item item) { }
     }
 
     public interface Filter {
@@ -52,6 +56,7 @@ public final class HomePanel extends ScrollView {
     private final List<Item> all = new ArrayList<>();
     private String query = "";
     private boolean onlyFav = false;
+    private boolean onlyOwn = false;
     private Integer material = null; // null=全部
     private String storeError = null;
     private boolean loading = true;
@@ -106,7 +111,11 @@ public final class HomePanel extends ScrollView {
         content.addView(Ui.spacer(ctx, 10));
         TextView heading = Ui.serif(ctx, "把片刻，\n藏进光里。", 34f, Ui.INK);
         heading.setLineSpacing(Ui.dp(ctx, 6), 1f);
-        content.addView(heading);
+        LinearLayout cover = Ui.hbox(ctx);
+        cover.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        cover.addView(heading, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        cover.addView(new GalleryEmblem(ctx), new LinearLayout.LayoutParams(Ui.dp(ctx, 102), Ui.dp(ctx, 138)));
+        content.addView(cover);
         content.addView(Ui.spacer(ctx, 12));
         summary = Ui.text(ctx, "每一个平凡的日子，都有值得收藏的光。", 12f, Ui.MUTED);
         content.addView(summary);
@@ -171,7 +180,7 @@ public final class HomePanel extends ScrollView {
         featuredTitle = Ui.serifBold(ctx, "", 20f, Ui.INK);
         featuredMeta = Ui.eyebrow(ctx, "");
         LinearLayout ft = Ui.vbox(ctx);
-        ft.setPadding(Ui.dp(ctx, 18), 0, Ui.dp(ctx, 18), Ui.dp(ctx, 16));
+        ft.setPadding(Ui.dp(ctx, 18), Ui.dp(ctx, 16), Ui.dp(ctx, 18), Ui.dp(ctx, 18));
         ft.addView(featuredMeta);
         ft.addView(Ui.spacer(ctx, 4));
         ft.addView(featuredTitle);
@@ -185,6 +194,10 @@ public final class HomePanel extends ScrollView {
         ft.addView(Ui.spacer(ctx, 6));
         ft.addView(featuredNote);
         Ui.touchSurface(ctx, featuredCard, 26);
+        featuredCard.setOnLongClickListener(v -> {
+            if (featured != null) showActions(featured);
+            return true;
+        });
         featuredCard.setOnClickListener(v -> {
             if (featured != null) host.onOpen(featured);
         });
@@ -223,6 +236,8 @@ public final class HomePanel extends ScrollView {
                 }).setNegativeButton("取消", null).show());
         controls.addView(sortControl, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f));
         content.addView(controls);
+        content.addView(Ui.spacer(ctx, 8));
+        content.addView(Ui.text(ctx, "轻触赏光 · 长按藏品可心动、编辑或分享", 11, Ui.MUTED));
         content.addView(Ui.spacer(ctx, 12));
 
         grid = Ui.vbox(ctx);
@@ -265,6 +280,7 @@ public final class HomePanel extends ScrollView {
         out.putBoolean("homeTimeline", timeline);
         out.putString("homeQuery", query);
         out.putBoolean("homeFav", onlyFav);
+        out.putBoolean("homeOwn", onlyOwn);
         out.putInt("homeMat", material == null ? -1 : material);
         out.putInt("homeScroll", getScrollY());
     }
@@ -275,6 +291,7 @@ public final class HomePanel extends ScrollView {
         if (timeline && sort > CollectionInsights.OLDEST) sort = CollectionInsights.NEWEST;
         query = in.getString("homeQuery", "");
         onlyFav = in.getBoolean("homeFav", false);
+        onlyOwn = in.getBoolean("homeOwn", false);
         int m = in.getInt("homeMat", -1);
         material = m < 0 ? null : m;
         search.setText(query);
@@ -285,7 +302,9 @@ public final class HomePanel extends ScrollView {
     }
 
     private List<Item> filtered() {
-        return CollectionInsights.select(all, query, onlyFav, material, sort);
+        List<Item> source = new ArrayList<>();
+        for (Item item : all) if (!onlyOwn || !item.sample) source.add(item);
+        return CollectionInsights.select(source, query, onlyFav, material, sort);
     }
 
     private void setTimeline(boolean enabled) {
@@ -297,8 +316,9 @@ public final class HomePanel extends ScrollView {
 
     private void renderChips(Context ctx) {
         chipsRow.removeAllViews();
-        addChip(ctx, "全部", material == null && !onlyFav,
-            () -> { material = null; onlyFav = false; });
+        addChip(ctx, "全部", material == null && !onlyFav && !onlyOwn,
+            () -> { material = null; onlyFav = false; onlyOwn = false; });
+        addChip(ctx, "我的收藏", onlyOwn, () -> { onlyOwn = !onlyOwn; });
         addChip(ctx, "♥ 心动", onlyFav,
             () -> { onlyFav = !onlyFav; });
         String[] names = {"蜜金", "海盐", "银雾"};
@@ -349,7 +369,7 @@ public final class HomePanel extends ScrollView {
         }
 
         List<Item> items = filtered();
-        boolean searching = !query.isEmpty() || onlyFav || material != null;
+        boolean searching = !query.isEmpty() || onlyFav || onlyOwn || material != null;
 
         resultCount.setText(searching ? items.size() + " / " + all.size() + " 件" : all.size() + " 件藏品");
         int personal = 0;
@@ -460,6 +480,7 @@ public final class HomePanel extends ScrollView {
         b.setOnClickListener(v -> {
             query = "";
             onlyFav = false;
+            onlyOwn = false;
             material = null;
             search.setText("");
             renderChips(ctx);
@@ -502,8 +523,19 @@ public final class HomePanel extends ScrollView {
         card.addView(meta);
 
         card.setOnClickListener(v -> host.onOpen(it));
+        card.setOnLongClickListener(v -> { showActions(it); return true; });
         bindThumb(thumb, it, gen);
         return card;
+    }
+
+    private void showActions(Item item) {
+        new AlertDialog.Builder(getContext()).setTitle(item.title)
+            .setItems(new String[]{item.favorite ? "取消心动" : "标记心动", "编辑展签与手记", "制作分享卡"},
+                (dialog, which) -> {
+                    if (which == 0) host.onToggleFavorite(item.copy());
+                    else if (which == 1) host.onEdit(item.copy());
+                    else host.onShare(item.copy());
+                }).setNegativeButton("关闭", null).show();
     }
 
     private View makeTimelineCard(Context ctx, Item it, int gen) {
@@ -532,6 +564,7 @@ public final class HomePanel extends ScrollView {
         row.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         row.setContentDescription(Ui.dateStr(it.created) + "，" + it.title + "，" + Ui.materialName(it.material));
         row.setOnClickListener(v -> host.onOpen(it));
+        row.setOnLongClickListener(v -> { showActions(it); return true; });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.bottomMargin = Ui.dp(ctx, 10);

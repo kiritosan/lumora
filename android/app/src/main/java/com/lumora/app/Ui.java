@@ -113,7 +113,7 @@ public final class Ui {
     /** 小号大写感展签：字距拉开的上标风格文字。 */
     public static TextView eyebrow(Context c, String s) {
         TextView t = text(c, s, 11f, MUTED);
-        t.setLetterSpacing(0.28f);
+        t.setLetterSpacing(0.14f);
         return t;
     }
 

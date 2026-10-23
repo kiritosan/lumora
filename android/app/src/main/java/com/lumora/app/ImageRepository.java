@@ -211,11 +211,23 @@ public final class ImageRepository {
 
     /** 生成分享卡 PNG 到 share 目录，返回文件。 */
     public File writeSharePng(Item item, Bitmap photo) throws IOException {
+        return writeSharePng(item, photo, ShareCardRenderer.GALLERY, false);
+    }
+
+    public File writeSharePng(Item item, Bitmap photo, int style, boolean note) throws IOException {
+        if (item == null) {
+            throw new IOException("缺少藏品，无法生成分享图");
+        }
         // 照片型藏品缺图时不分享「占位图伪装成品」：直接报错
-        if (item != null && item.isPhoto() && photo == null) {
+        if (item.isPhoto() && (photo == null || photo.isRecycled())) {
             throw new IOException("照片不可用，无法生成分享图");
         }
-        Bitmap bmp = ArtworkRenderer.renderShareBitmap(item, photo);
+        final Bitmap bmp;
+        try {
+            bmp = ShareCardRenderer.render(item, photo, style, note, ShareCardRenderer.WIDTH);
+        } catch (IllegalArgumentException | OutOfMemoryError e) {
+            throw new IOException("分享图渲染失败", e);
+        }
         if (bmp == null) {
             throw new IOException("分享图渲染失败");
         }

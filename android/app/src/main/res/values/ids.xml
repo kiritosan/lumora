@@ -15,4 +15,5 @@
     <item name="stage_shuffle" type="id" />
     <item name="stage_flip" type="id" />
     <item name="edit_prompt" type="id" />
+    <item name="stage_original" type="id" />
 </resources>

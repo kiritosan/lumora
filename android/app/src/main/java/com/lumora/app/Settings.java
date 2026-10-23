@@ -34,6 +34,14 @@ public final class Settings {
         prefs(c).edit().putBoolean(KEY_HAPTICS, on).apply();
     }
 
+    public static int displayFrame(Context c) {
+        return Math.max(0, Math.min(DisplayFrame.ARCH, prefs(c).getInt("display_frame", DisplayFrame.MUSEUM)));
+    }
+
+    public static void setDisplayFrame(Context c, int frame) {
+        prefs(c).edit().putInt("display_frame", frame).apply();
+    }
+
     /** 相机回写期间暂存的文件名（ShareProvider 据此放行一次写）。 */
     public static void setPendingCamera(Context c, String name) {
         prefs(c).edit().putString(KEY_PENDING_CAMERA, name).apply();

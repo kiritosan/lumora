@@ -60,12 +60,17 @@ public final class StagePanel extends FrameLayout {
     private TextView focusTitle, focusMeta, positionTv;
     private Button focusB, shuffleB, focusPrev, focusNext;
     private boolean focused;
+    private int frame;
+    private boolean originalPhoto;
+    private TextView originalB;
+    private final TextView[] frameChips = new TextView[3];
 
     public StagePanel(Context ctx, Host host, ImageRepository repo, Executor io) {
         super(ctx);
         this.host = host;
         this.repo = repo;
         this.io = io;
+        frame = Settings.displayFrame(ctx);
         build(ctx);
     }
 
@@ -82,6 +87,32 @@ public final class StagePanel extends FrameLayout {
         content.addView(Ui.spacer(ctx, 12));
         TextView hint = Ui.text(ctx, "轻触画面，或缓缓转动手机，让光掠过藏品", 12f, Ui.MUTED);
         content.addView(hint);
+        content.addView(Ui.spacer(ctx, 14));
+        android.widget.HorizontalScrollView presentationScroll = new android.widget.HorizontalScrollView(ctx);
+        presentationScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout presentation = Ui.hbox(ctx);
+        for (int i = 0; i < frameChips.length; i++) {
+            final int selected = i;
+            frameChips[i] = Ui.chip(ctx, DisplayFrame.NAMES[i], frame == i);
+            frameChips[i].setOnClickListener(v -> {
+                frame = selected;
+                originalPhoto = false;
+                Settings.setDisplayFrame(ctx, selected);
+                Ui.haptic(ctx, v);
+                applyPresentation();
+            });
+            presentation.addView(frameChips[i]);
+            presentation.addView(hgap(ctx));
+        }
+        originalB = Ui.chip(ctx, "完整原图", false);
+        originalB.setId(R.id.stage_original);
+        originalB.setOnClickListener(v -> {
+            originalPhoto = !originalPhoto;
+            applyPresentation();
+        });
+        presentation.addView(originalB);
+        presentationScroll.addView(presentation);
+        content.addView(presentationScroll);
         content.addView(Ui.spacer(ctx, 14));
 
         // 卡面：正面画作 / 背面手记（背面可滚动，手记再长也读得完）
@@ -237,6 +268,7 @@ public final class StagePanel extends FrameLayout {
         for (int i = 0; i < order.size(); i++) {
             if (order.get(i).id.equals(itemId)) {
                 index = i;
+                originalPhoto = false;
                 backShown = false;
                 bind();
                 host.onSelectionChanged(itemId);
@@ -271,6 +303,7 @@ public final class StagePanel extends FrameLayout {
         int ni = index + d;
         if (ni < 0 || ni >= order.size()) return;
         index = ni;
+        originalPhoto = false;
         backShown = false;
         Ui.haptic(getContext(), d < 0 ? prevB : nextB);
         bind();
@@ -338,6 +371,7 @@ public final class StagePanel extends FrameLayout {
             return;
         }
         emptyBox.setVisibility(GONE);
+        applyPresentation();
 
         focusTitle.setText(it.title);
         focusMeta.setText(Ui.materialName(it.material) + " · " + Ui.dateCompact(it.created));
@@ -399,6 +433,18 @@ public final class StagePanel extends FrameLayout {
             setArtwork(it, null, ArtworkRenderer.PHOTO_OK);
         }
         applyMotion();
+    }
+
+    private void applyPresentation() {
+        Item item = current();
+        boolean photo = item != null && item.isPhoto();
+        boolean original = photo && originalPhoto;
+        for (int i = 0; i < frameChips.length; i++)
+            Ui.restyleChip(getContext(), frameChips[i], !original && frame == i);
+        originalB.setVisibility(photo ? VISIBLE : GONE);
+        Ui.restyleChip(getContext(), originalB, original);
+        art.setPresentation(frame, original);
+        focusArt.setPresentation(frame, original);
     }
 
     private void setArtwork(Item item, Bitmap bitmap, int state) {
@@ -470,11 +516,13 @@ public final class StagePanel extends FrameLayout {
     public boolean isFocused() { return focused; }
 
     public void saveState(android.os.Bundle out) {
+        out.putBoolean("stageOriginal", originalPhoto);
         out.putBoolean("stageBack", backShown);
         out.putBoolean("stageFocus", focused);
     }
 
     public void restoreState(android.os.Bundle in) {
+        originalPhoto = in.getBoolean("stageOriginal", false);
         backShown = in.getBoolean("stageBack", false);
         bind();
         if (in.getBoolean("stageFocus", false)) enterFocus();
@@ -482,6 +530,7 @@ public final class StagePanel extends FrameLayout {
 
     private void showEmpty(String msg, String cta) {
         exitFocus();
+        originalB.setVisibility(GONE);
         ++loadGen;
         setArtwork(null, null, ArtworkRenderer.PHOTO_OK);
         art.setMotionActive(false);

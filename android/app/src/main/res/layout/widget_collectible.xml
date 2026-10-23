@@ -41,16 +41,18 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:letterSpacing="0.2"
-        android:textColor="#7B8477"
-        android:textSize="10sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="#667265"
+        android:textSize="12sp"
         android:text="LUMORA / 今日一藏" />
 
     <TextView
         android:id="@+id/widget_next"
         android:layout_width="match_parent"
-        android:layout_height="36dp"
+        android:layout_height="32dp"
         android:gravity="end|center_vertical"
         android:textColor="#183B38"
         android:textSize="12sp"
-        android:contentDescription="浏览下一件藏品" />
+        android:contentDescription="@string/widget_next_desc" />
 </LinearLayout>

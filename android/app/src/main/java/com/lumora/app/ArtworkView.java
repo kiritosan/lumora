@@ -34,6 +34,17 @@ public class ArtworkView extends View implements SensorEventListener {
     private Sensor sensor;
     private boolean sensorRegistered;
     private boolean touching;
+    private final DisplayFrame displayFrame = new DisplayFrame();
+    private int frame = DisplayFrame.EDGE;
+    private boolean originalPhoto;
+
+    public void setPresentation(int frame, boolean originalPhoto) {
+        this.frame = Math.max(0, Math.min(DisplayFrame.ARCH, frame));
+        this.originalPhoto = originalPhoto;
+        wantX = wantY = tiltX = tiltY = 0;
+        updateSensor();
+        invalidate();
+    }
 
     public ArtworkView(Context context) {
         super(context);
@@ -78,7 +89,7 @@ public class ArtworkView extends View implements SensorEventListener {
     }
 
     private void updateSensor() {
-        if (motionActive && interactive && windowAttached && isShown()
+        if (motionActive && interactive && !originalPhoto && windowAttached && isShown()
             && Settings.tiltEnabled(getContext()) && Ui.animationsEnabled(getContext())) {
             if (sm == null) {
                 sm = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
@@ -126,7 +137,7 @@ public class ArtworkView extends View implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent e) {
-        if (touching || !motionActive) return;
+        if (touching || !motionActive || originalPhoto) return;
         float gx = e.values[0];
         float gz = e.values.length > 2 ? e.values[2] : 0f;
         float nx = sensorTilt(-gx);
@@ -155,7 +166,7 @@ public class ArtworkView extends View implements SensorEventListener {
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        if (!interactive) return false;
+        if (!interactive || originalPhoto) return false;
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 Ui.haptic(getContext(), this);
@@ -196,10 +207,13 @@ public class ArtworkView extends View implements SensorEventListener {
         int w = getWidth(), h = getHeight();
         canvas.save();
         canvas.translate(w / 2f, h / 2f);
-        canvas.rotate(tiltX * 0.35f);
-        canvas.scale(1.05f, 1.05f);
+        if (frame == DisplayFrame.EDGE && !originalPhoto) {
+            canvas.rotate(tiltX * 0.35f);
+            canvas.scale(1.05f, 1.05f);
+        }
         canvas.translate(-w / 2f, -h / 2f);
-        ArtworkRenderer.drawArtwork(canvas, w, h, item, photo, tiltX, tiltY, photoState);
+        displayFrame.draw(canvas, w, h, item, photo, photoState,
+            tiltX, tiltY, frame, originalPhoto);
         canvas.restore();
 
         if (moving) postInvalidateOnAnimation();

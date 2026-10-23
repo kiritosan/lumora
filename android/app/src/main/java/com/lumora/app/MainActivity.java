@@ -43,11 +43,16 @@ public final class MainActivity extends Activity
     private static final int REQ_CAPTURE = 42;
     private static final int REQ_BACKUP_OUT = 43;
     private static final int REQ_BACKUP_IN = 44;
+    private static final int REQ_SAVE_CARD = 45;
 
     /** 已消费的 Intent 被打上此 action，重建后不再重放（包级可见供测试断言）。 */
     static final String ACTION_CONSUMED = "com.lumora.app.CONSUMED";
 
     private AppState app;
+    private ShareComposer shareComposer;
+    private Item pendingShare;
+    private int pendingShareStyle;
+    private boolean pendingShareNote;
     private final AppState.DataListener dataListener = this::onDataChanged;
     private boolean resumed = false;
 
@@ -214,7 +219,8 @@ public final class MainActivity extends Activity
 
     private void applyTiltState() {
         // 传感器只在「前台 + 光桌页 + 无编辑覆盖 + 画作正面」时注册
-        if (resumed && currentTab == TAB_TABLE && !editVisible) {
+        if (resumed && currentTab == TAB_TABLE && !editVisible
+            && (shareComposer == null || !shareComposer.isShowing())) {
             stage.onPanelShown();
         } else {
             stage.onPanelHidden();
@@ -489,11 +495,23 @@ public final class MainActivity extends Activity
 
     @Override
     public void onShare(Item item) {
+        if (app.isBusy() || (shareComposer != null && shareComposer.isShowing())) return;
+        final Item snapshot = item.copy();
+        shareComposer = new ShareComposer(this, snapshot, app, (style, note, save) -> {
+            if (save) chooseShareDestination(snapshot, style, note);
+            else exportShare(snapshot, style, note);
+        });
+        shareComposer.setOnDismissListener(dialog -> { shareComposer = null; applyTiltState(); });
+        shareComposer.show();
+        applyTiltState();
+    }
+
+    private void exportShare(Item item, int style, boolean note) {
         final File[] out = {null};
         ioBusy(() -> {
             Bitmap photo = item.isPhoto()
                 ? app.repo().loadPhoto(item.photoName, 1600) : null;
-            out[0] = app.repo().writeSharePng(item, photo);
+            out[0] = app.repo().writeSharePng(item, photo, style, note);
         }, err -> {
             if (isFinishing() || isDestroyed()) return;
             if (err != null || out[0] == null) {
@@ -513,6 +531,37 @@ public final class MainActivity extends Activity
                 Ui.toast(this, "没有可分享的应用");
             }
         });
+    }
+
+    private void chooseShareDestination(Item item, int style, boolean note) {
+        pendingShare = item.copy(); pendingShareStyle = style; pendingShareNote = note;
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
+            .addCategory(Intent.CATEGORY_OPENABLE).setType("image/png")
+            .putExtra(Intent.EXTRA_TITLE, "Lumora-" + item.serial() + ".png");
+        try { startActivityForResult(intent, REQ_SAVE_CARD); }
+        catch (ActivityNotFoundException | SecurityException e) {
+            pendingShare = null;
+            Ui.toast(this, "没有可用的文件保存应用");
+        }
+    }
+
+    private void saveShareImage(Uri destination) {
+        final Item item = pendingShare;
+        final int style = pendingShareStyle;
+        final boolean note = pendingShareNote;
+        pendingShare = null;
+        if (item == null || destination == null) return;
+        ioBusy(() -> {
+            Bitmap photo = item.isPhoto() ? app.repo().loadPhoto(item.photoName, 1600) : null;
+            File file = app.repo().writeSharePng(item, photo, style, note);
+            try (InputStream input = new FileInputStream(file);
+                 OutputStream output = getContentResolver().openOutputStream(destination, "wt")) {
+                if (output == null) throw new java.io.IOException("无法打开保存位置");
+                byte[] buffer = new byte[8192];
+                int n;
+                while ((n = input.read(buffer)) != -1) output.write(buffer, 0, n);
+            } finally { file.delete(); }
+        }, error -> Ui.toast(this, error == null ? "分享卡片已保存" : "保存失败：" + error));
     }
 
     // ---- 编辑/新建覆盖页 ----
@@ -736,6 +785,10 @@ public final class MainActivity extends Activity
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
         switch (req) {
+            case REQ_SAVE_CARD:
+                if (res == RESULT_OK && data != null) saveShareImage(data.getData());
+                else pendingShare = null;
+                break;
             case REQ_PICK:
                 if (res == RESULT_OK && data != null && data.getData() != null) {
                     importFromUri(data.getData());
@@ -1014,6 +1067,12 @@ public final class MainActivity extends Activity
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
+        if (pendingShare != null) {
+            try { out.putString("pendingShare", pendingShare.toJson().toString()); }
+            catch (org.json.JSONException ignored) { }
+            out.putInt("pendingShareStyle", pendingShareStyle);
+            out.putBoolean("pendingShareNote", pendingShareNote);
+        }
         out.putInt("tab", currentTab);
         out.putBoolean("detail", tableIsDetail);
         out.putInt("returnTab", tableReturnTab);
@@ -1045,6 +1104,14 @@ public final class MainActivity extends Activity
     }
 
     private void restoreSaved(Bundle in) {
+        String shareJson = in.getString("pendingShare");
+        if (shareJson != null) {
+            try {
+                pendingShare = Item.fromJson(new org.json.JSONObject(shareJson));
+                pendingShareStyle = in.getInt("pendingShareStyle", 0);
+                pendingShareNote = in.getBoolean("pendingShareNote", false);
+            } catch (org.json.JSONException ignored) { pendingShare = null; }
+        }
         tableIsDetail = in.getBoolean("detail", false);
         tableReturnTab = in.getInt("returnTab", TAB_HOME);
         selectedId = in.getString("selectedId", null);
@@ -1152,6 +1219,11 @@ public final class MainActivity extends Activity
 
     @Override
     protected void onDestroy() {
+        if (shareComposer != null) {
+            shareComposer.setOnDismissListener(null);
+            shareComposer.dismiss();
+            shareComposer = null;
+        }
         // 共享 io 线程归 AppState，绝不在此 shutdown
         super.onDestroy();
     }

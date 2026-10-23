@@ -68,7 +68,7 @@ public final class Item {
 
     /** 展签编号：由稳定 id 派生，不存数据库冗余字段。 */
     public String serial() {
-        String flat = id.replace("-", "").toUpperCase();
+        String flat = id.replace("-", "").toUpperCase(java.util.Locale.ROOT);
         return "LMR-" + flat.substring(0, Math.min(6, flat.length()));
     }
 

@@ -19,14 +19,14 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:gravity="center_vertical"
-        android:paddingLeft="16dp">
+        android:paddingStart="16dp">
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:letterSpacing="0.12"
-            android:text="LUMORA / 藏馆"
+            android:text="@string/widget_brand"
             android:textColor="#AF7449"
-            android:textSize="10sp" />
+            android:textSize="12sp" />
         <TextView
             android:id="@+id/widget_title"
             android:layout_width="match_parent"
@@ -42,15 +42,17 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="#7B8477"
-            android:textSize="11sp" />
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="#667265"
+            android:textSize="12sp" />
         <TextView
             android:id="@+id/widget_next"
             android:layout_width="match_parent"
-            android:layout_height="28dp"
+            android:layout_height="32dp"
             android:gravity="start|center_vertical"
             android:textColor="#AF7449"
             android:textSize="12sp"
-            android:contentDescription="浏览下一件藏品" />
+            android:contentDescription="@string/widget_next_desc" />
     </LinearLayout>
 </LinearLayout>

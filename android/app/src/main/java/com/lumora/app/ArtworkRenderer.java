@@ -100,58 +100,7 @@ public final class ArtworkRenderer {
 
     /** 导出分享卡 1080x1440：暖纸边框 + 画作 + 标题 + 编号展签。 */
     public static Bitmap renderShareBitmap(Item item, Bitmap photo) {
-        Bitmap out = Bitmap.createBitmap(SHARE_W, SHARE_H, Bitmap.Config.ARGB_8888);
-        Canvas c = new Canvas(out);
-        c.drawColor(PAPER);
-
-        float m = 64f;
-        float artTop = 96f;
-        float artH = 960f;
-
-        // 细线内框
-        Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
-        line.setStyle(Paint.Style.STROKE);
-        line.setStrokeWidth(2f);
-        line.setColor(MUTED);
-        c.drawRect(new RectF(m / 2, m / 2, SHARE_W - m / 2, SHARE_H - m / 2), line);
-
-        // 画作区
-        RectF art = new RectF(m, artTop, SHARE_W - m, artTop + artH);
-        c.save();
-        c.clipRect(art);
-        c.translate(art.left, art.top);
-        int state = photo != null ? PHOTO_OK : PHOTO_FAILED;
-        drawArtwork(c, (int) art.width(), (int) art.height(), item, photo, 0f, 0f, state);
-        c.restore();
-        line.setColor(CHAMPAGNE);
-        c.drawRect(art, line);
-
-        // 展签
-        Paint t = new Paint(Paint.ANTI_ALIAS_FLAG);
-        t.setColor(INK);
-        t.setTypeface(Typeface.create("serif", Typeface.BOLD));
-        t.setTextSize(58f);
-        String title = item != null && item.title != null ? item.title : "";
-        c.drawText(ellipsize(t, title, SHARE_W - 2 * m), m, artTop + artH + 116f, t);
-
-        Paint sub = new Paint(Paint.ANTI_ALIAS_FLAG);
-        sub.setColor(MUTED);
-        sub.setTextSize(30f);
-        String serial = item != null ? item.serial() : "";
-        String date = item != null
-            ? new SimpleDateFormat("yyyy.MM.dd", Locale.ROOT).format(new Date(item.created))
-            : "";
-        c.drawText(serial + "  ·  " + Ui.materialName(materialOf(item)) + "  ·  " + date,
-            m, artTop + artH + 172f, sub);
-
-        Paint brand = new Paint(Paint.ANTI_ALIAS_FLAG);
-        brand.setColor(INK);
-        brand.setTextSize(26f);
-        brand.setLetterSpacing(0.35f);
-        String brandText = "LUMORA · 拾光";
-        float bw = brand.measureText(brandText);
-        c.drawText(brandText, SHARE_W - m - bw, SHARE_H - m + 8f, brand);
-        return out;
+        return ShareCardRenderer.render(item, photo, ShareCardRenderer.GALLERY, false, SHARE_W);
     }
 
     private static int materialOf(Item item) {
