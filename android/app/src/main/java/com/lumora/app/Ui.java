@@ -30,6 +30,11 @@ public final class Ui {
     public static final int CHAMPAGNE = 0xFFD6B675;
     public static final int CARD = 0xFFFFFDF8;
     public static final int LINE = 0xFFE5E6DF;
+    public static final int OBSIDIAN = 0xFF121817;
+    public static final int OBSIDIAN_SURFACE = 0xFF1A2422;
+    public static final int OBSIDIAN_LINE = 0xFF2B3A37;
+    public static final int BRASS = 0xFFC8A464;
+    public static final int VELVET = 0xFF0E1413;
 
     private static final String[] MATERIAL_NAMES = {"蜜金", "海盐", "银雾"};
 
@@ -86,6 +91,55 @@ public final class Ui {
     public static GradientDrawable canvasBackground() {
         return new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             new int[] {0xFFF8F5EF, 0xFFF3F5F0, 0xFFECEFE9});
+    }
+
+    /** Dark velvet curator cabinet surface with subtle brass rim. */
+    public static GradientDrawable darkGlass(Context c, float radius) {
+        GradientDrawable g = new GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            new int[] {0xFF212D2B, 0xFF182220, 0xFF121918});
+        g.setCornerRadius(dp(c, radius));
+        g.setStroke(Math.max(1, dp(c, 1)), 0x44D6B675);
+        return g;
+    }
+
+    public static Button darkButton(Context c, String s, boolean accent) {
+        Button b = new Button(c);
+        b.setText(s);
+        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        b.setAllCaps(false);
+        b.setMinHeight(dp(c, 48));
+        b.setMinimumHeight(dp(c, 48));
+        b.setMinWidth(0);
+        b.setMinimumWidth(0);
+        b.setPadding(dp(c, 12), 0, dp(c, 12), 0);
+        GradientDrawable bg = accent
+            ? rounded(c, CHAMPAGNE, 24, null, 0)
+            : darkGlass(c, 24);
+        b.setTextColor(accent ? OBSIDIAN : PAPER);
+        b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33D6B675),
+            bg, rounded(c, 0xFFFFFFFF, 24, null, 0)));
+        return b;
+    }
+
+    public static TextView darkChip(Context c, String s, boolean selected) {
+        TextView t = text(c, s, 12.5f, selected ? OBSIDIAN : 0xFFD9D4C7);
+        t.setMinHeight(dp(c, 48));
+        t.setMinWidth(dp(c, 54));
+        t.setGravity(android.view.Gravity.CENTER);
+        t.setPadding(dp(c, 13), dp(c, 6), dp(c, 13), dp(c, 6));
+        t.setFocusable(true);
+        restyleDarkChip(c, t, selected);
+        return t;
+    }
+
+    public static void restyleDarkChip(Context c, TextView t, boolean selected) {
+        t.setTextColor(selected ? OBSIDIAN : 0xFFD9D4C7);
+        t.setSelected(selected);
+        t.setContentDescription(t.getText() + (selected ? "（已选中）" : ""));
+        t.setBackground(selected
+            ? rounded(c, CHAMPAGNE, 20, null, 0)
+            : rounded(c, 0xFF1A2523, 20, 0x44D6B675, 1));
     }
 
     public static TextView text(Context c, String s, float sp, int color) {

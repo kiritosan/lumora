@@ -35,11 +35,19 @@ public final class Settings {
     }
 
     public static int displayFrame(Context c) {
-        return Math.max(0, Math.min(DisplayFrame.ARCH, prefs(c).getInt("display_frame", DisplayFrame.MUSEUM)));
+        return Math.max(0, Math.min(DisplayFrame.POLAROID, prefs(c).getInt("display_frame", DisplayFrame.MUSEUM)));
     }
 
     public static void setDisplayFrame(Context c, int frame) {
-        prefs(c).edit().putInt("display_frame", frame).apply();
+        prefs(c).edit().putInt("display_frame", Math.max(0, Math.min(DisplayFrame.POLAROID, frame))).apply();
+    }
+
+    public static int stageLamp(Context c) {
+        return Math.max(0, Math.min(DisplayFrame.LAMP_CANDLE, prefs(c).getInt("stage_lamp", DisplayFrame.LAMP_HALOGEN)));
+    }
+
+    public static void setStageLamp(Context c, int lamp) {
+        prefs(c).edit().putInt("stage_lamp", Math.max(0, Math.min(DisplayFrame.LAMP_CANDLE, lamp))).apply();
     }
 
     /** 相机回写期间暂存的文件名（ShareProvider 据此放行一次写）。 */

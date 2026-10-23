@@ -318,9 +318,9 @@ public final class ArtworkRenderer {
         p.setShader(null);
     }
 
-    /** 材质釉光：统一色调层，照片与画作共用。 */
+    /** 材质釉光：统一色调层 + 材质细腻肌理（蜜金拉丝/海盐晶面/银雾丝绢），照片与画作共用。 */
     private static void drawGlaze(Canvas c, int w, int h, int material) {
-        Paint g = new Paint();
+        Paint g = new Paint(Paint.ANTI_ALIAS_FLAG);
         switch (material) {
             case Item.MATERIAL_SEA:
                 g.setColor(Color.argb(26, 0x6E, 0x9E, 0x96));
@@ -334,35 +334,81 @@ public final class ArtworkRenderer {
                 break;
         }
         c.drawRect(0, 0, w, h, g);
+
+        if (material == Item.MATERIAL_GOLD) {
+            // 暖金细微拉丝金属光泽
+            g.setShader(new LinearGradient(0, 0, w, h * 0.45f,
+                new int[]{Color.TRANSPARENT, Color.argb(20, 0xFB, 0xE6, 0xAE),
+                    Color.argb(12, 0x30, 0x25, 0x18), Color.argb(18, 0xFF, 0xF6, 0xDD),
+                    Color.TRANSPARENT},
+                new float[]{0f, 0.28f, 0.48f, 0.68f, 1f}, Shader.TileMode.CLAMP));
+            c.drawRect(0, 0, w, h, g);
+            g.setShader(null);
+        } else if (material == Item.MATERIAL_SEA) {
+            // 海盐矿物清透折光
+            g.setShader(new LinearGradient(0, 0, w * 0.85f, h,
+                new int[]{Color.TRANSPARENT, Color.argb(22, 0xE4, 0xFC, 0xFF),
+                    Color.TRANSPARENT, Color.argb(18, 0xA8, 0xDD, 0xEC), Color.TRANSPARENT},
+                new float[]{0f, 0.25f, 0.46f, 0.72f, 1f}, Shader.TileMode.CLAMP));
+            c.drawRect(0, 0, w, h, g);
+            g.setShader(null);
+        } else {
+            // 银雾丝绸柔焦斜纹
+            g.setShader(new LinearGradient(0, h * 0.15f, w, h * 0.85f,
+                new int[]{Color.argb(12, 0x16, 0x20, 0x1E), Color.argb(22, 0xF5, 0xF1, 0xE8),
+                    Color.argb(10, 0x2E, 0x4A, 0x47), Color.argb(18, 0xEC, 0xE8, 0xDC)},
+                new float[]{0f, 0.36f, 0.66f, 1f}, Shader.TileMode.CLAMP));
+            c.drawRect(0, 0, w, h, g);
+            g.setShader(null);
+        }
     }
 
-    /** 集中的柔光与斜向箔带，二者一起移动，照片和暗色作品上也可见。 */
+    /** 集中的柔光、色散虹彩与斜向箔带，随倾角流动，照片和暗色作品上也清晰动人。 */
     private static void drawFoil(Canvas c, int w, int h, float tiltX, float tiltY, int material) {
         float nx = tiltX / 8f, ny = tiltY / 8f; // 已钳制 ±8deg
         float cx = w * (0.5f + nx * 0.54f);
         float cy = h * (0.42f + ny * 0.52f);
         float rad = Math.max(w, h) * 0.47f;
         int centerColor = material == Item.MATERIAL_SEA
-            ? Color.argb(145, 0xDF, 0xF0, 0xEE)
-            : Color.argb(150, 0xFF, 0xF0, 0xCC);
+            ? Color.argb(148, 0xDF, 0xF4, 0xF2)
+            : material == Item.MATERIAL_MIST
+                ? Color.argb(132, 0xF7, 0xF4, 0xEC)
+                : Color.argb(154, 0xFF, 0xF0, 0xCC);
         Paint f = new Paint(Paint.ANTI_ALIAS_FLAG);
         f.setShader(new RadialGradient(cx, cy, rad, centerColor, Color.TRANSPARENT,
             Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, f);
         f.setShader(null);
 
+        // 双重全息色散流光带（主高光带 + 副棱镜带）
         Paint streak = new Paint(Paint.ANTI_ALIAS_FLAG);
-        streak.setShader(new LinearGradient(cx - w * 0.35f, cy - h * 0.2f,
-            cx + w * 0.35f, cy + h * 0.2f,
-            new int[] {Color.TRANSPARENT, Color.argb(65, 0xFF, 0xF7, 0xDD),
-                Color.TRANSPARENT}, new float[] {0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+        int prismA = material == Item.MATERIAL_SEA
+            ? Color.argb(46, 0x98, 0xEC, 0xE8)
+            : material == Item.MATERIAL_MIST
+                ? Color.argb(38, 0xE2, 0xD8, 0xF0)
+                : Color.argb(48, 0xF9, 0xDF, 0xA4);
+        int prismB = material == Item.MATERIAL_SEA
+            ? Color.argb(36, 0xC8, 0xD8, 0xFA)
+            : Color.argb(38, 0xF4, 0xC2, 0xB8);
+        streak.setShader(new LinearGradient(cx - w * 0.38f, cy - h * 0.24f,
+            cx + w * 0.38f, cy + h * 0.24f,
+            new int[] {Color.TRANSPARENT, prismA, Color.argb(72, 0xFF, 0xF9, 0xE6),
+                prismB, Color.TRANSPARENT},
+            new float[] {0f, 0.34f, 0.5f, 0.66f, 1f}, Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, streak);
         streak.setShader(null);
+
+        // 内缘高光细框（增加光学晶面厚度感）
+        float inset = Math.max(1.5f, Math.min(w, h) * 0.012f);
+        streak.setStyle(Paint.Style.STROKE);
+        streak.setStrokeWidth(Math.max(1f, Math.min(w, h) * 0.003f));
+        streak.setColor(Color.argb(44, 0xFF, 0xFD, 0xF6));
+        c.drawRect(inset, inset, w - inset, h - inset, streak);
 
         // 边缘暗角，收拢视线
         Paint v = new Paint(Paint.ANTI_ALIAS_FLAG);
         v.setShader(new RadialGradient(w / 2f, h / 2f, Math.max(w, h) * 0.75f,
-            Color.TRANSPARENT, Color.argb(46, 0x10, 0x20, 0x1E), Shader.TileMode.CLAMP));
+            Color.TRANSPARENT, Color.argb(48, 0x10, 0x20, 0x1E), Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, v);
         v.setShader(null);
     }

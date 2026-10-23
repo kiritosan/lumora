@@ -65,4 +65,22 @@ public final class PresentationTest extends AndroidTestCase {
         withoutNote.recycle();
         withBlankNote.recycle();
     }
+
+    public void testAllDisplayFramesAndLampAtmospheresRenderWithoutMutatingItem() throws Exception {
+        Item item = Item.newProcedural("器物光景", "手记", Item.MATERIAL_GOLD, 1);
+        String before = item.toJson().toString();
+        DisplayFrame frame = new DisplayFrame();
+        for (int lamp = 0; lamp < DisplayFrame.LAMP_NAMES.length; lamp++) {
+            frame.setLamp(lamp);
+            assertEquals(lamp, frame.getLamp());
+            for (int style = 0; style < DisplayFrame.NAMES.length; style++) {
+                Bitmap rendered = Bitmap.createBitmap(180, 220, Bitmap.Config.ARGB_8888);
+                frame.draw(new Canvas(rendered), 180, 220, item, null,
+                    ArtworkRenderer.PHOTO_OK, 4f, -3f, style, false);
+                assertEquals(255, Color.alpha(rendered.getPixel(90, 110)));
+                rendered.recycle();
+            }
+        }
+        assertEquals(before, item.toJson().toString());
+    }
 }

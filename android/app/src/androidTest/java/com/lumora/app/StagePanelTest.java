@@ -94,4 +94,15 @@ public final class StagePanelTest extends InstrumentationTestCase {
         assertFalse(panel.isFocused());
         assertFalse(panel.findViewById(R.id.stage_focus).isEnabled());
     }
+
+    public void testLampAndLoupeTogglesAreReadOnly() throws Throwable {
+        List<Item> its = items(2);
+        final String before = its.get(0).toJson().toString();
+        onMain(() -> {
+            panel.setItems(its, its.get(0).id);
+            panel.findViewById(R.id.stage_lamp).performClick();
+            panel.findViewById(R.id.stage_loupe).performClick();
+        });
+        assertEquals(before, its.get(0).toJson().toString());
+    }
 }

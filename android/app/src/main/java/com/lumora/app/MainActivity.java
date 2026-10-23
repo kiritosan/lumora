@@ -50,6 +50,7 @@ public final class MainActivity extends Activity
 
     private AppState app;
     private ShareComposer shareComposer;
+    private TactileStudyDialog tactileDialog;
     private Item pendingShare;
     private int pendingShareStyle;
     private boolean pendingShareNote;
@@ -220,7 +221,8 @@ public final class MainActivity extends Activity
     private void applyTiltState() {
         // 传感器只在「前台 + 光桌页 + 无编辑覆盖 + 画作正面」时注册
         if (resumed && currentTab == TAB_TABLE && !editVisible
-            && (shareComposer == null || !shareComposer.isShowing())) {
+            && (shareComposer == null || !shareComposer.isShowing())
+            && (tactileDialog == null || !tactileDialog.isShowing())) {
             stage.onPanelShown();
         } else {
             stage.onPanelHidden();
@@ -503,6 +505,19 @@ public final class MainActivity extends Activity
         });
         shareComposer.setOnDismissListener(dialog -> { shareComposer = null; applyTiltState(); });
         shareComposer.show();
+        applyTiltState();
+    }
+
+    @Override
+    public void onOpenTactileStudy(List<Item> items) {
+        if (items == null || items.isEmpty() || app.isBusy()
+            || (tactileDialog != null && tactileDialog.isShowing())) return;
+        tactileDialog = new TactileStudyDialog(this, items, app.repo(), app.io());
+        tactileDialog.setOnDismissListener(dialog -> {
+            tactileDialog = null;
+            applyTiltState();
+        });
+        tactileDialog.show();
         applyTiltState();
     }
 
@@ -1047,6 +1062,17 @@ public final class MainActivity extends Activity
         app.unregister(dataListener);
         stage.onPanelHidden();
         super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (shareComposer != null && shareComposer.isShowing()) {
+            shareComposer.dismiss();
+        }
+        if (tactileDialog != null && tactileDialog.isShowing()) {
+            tactileDialog.dismiss();
+        }
+        super.onDestroy();
     }
 
     @Override

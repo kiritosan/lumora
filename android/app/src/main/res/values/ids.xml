@@ -16,4 +16,10 @@
     <item name="stage_flip" type="id" />
     <item name="edit_prompt" type="id" />
     <item name="stage_original" type="id" />
+    <item name="stage_lamp" type="id" />
+    <item name="stage_tactile" type="id" />
+    <item name="stage_loupe" type="id" />
+    <item name="tactile_gravity" type="id" />
+    <item name="tactile_shake" type="id" />
+    <item name="tactile_magnet" type="id" />
 </resources>

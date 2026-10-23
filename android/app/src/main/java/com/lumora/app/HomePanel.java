@@ -41,6 +41,7 @@ public final class HomePanel extends ScrollView {
         default void onEdit(Item item) { }
         default void onToggleFavorite(Item item) { }
         default void onShare(Item item) { }
+        default void onOpenTactileStudy(List<Item> items) { }
     }
 
     public interface Filter {
@@ -99,7 +100,19 @@ public final class HomePanel extends ScrollView {
         TextView brand = Ui.serifBold(ctx, "Lumora", 30f, Ui.INK);
         brandRow.addView(brand, new LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        addB = Ui.button(ctx, "＋ 拾取", false);
+        android.widget.Button studyB = Ui.button(ctx, "掌心把玩", false);
+        studyB.setContentDescription("打开掌心物理把玩沙盘");
+        studyB.setOnClickListener(v -> {
+            if (!all.isEmpty()) {
+                Ui.haptic(ctx, v);
+                host.onOpenTactileStudy(new ArrayList<>(all));
+            }
+        });
+        LinearLayout.LayoutParams studyLp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        studyLp.rightMargin = Ui.dp(ctx, 8);
+        brandRow.addView(studyB, studyLp);
+        addB = Ui.button(ctx, "＋ 拾取", true);
         addB.setId(R.id.add_photo);
         addB.setContentDescription("从相册或相机拾取新照片");
         addB.setOnClickListener(v -> host.onRequestAdd());
