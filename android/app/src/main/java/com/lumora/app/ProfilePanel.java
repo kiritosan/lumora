@@ -129,7 +129,7 @@ public final class ProfilePanel extends FrameLayout {
     private Switch toggleRow(Context ctx, LinearLayout root, String title, String desc) {
         LinearLayout row = Ui.hbox(ctx);
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        row.setMinHeight(Ui.dp(ctx, 56));
+        row.setMinimumHeight(Ui.dp(ctx, 56));
         LinearLayout texts = Ui.vbox(ctx);
         texts.addView(Ui.text(ctx, title, 15f, Ui.INK));
         texts.addView(Ui.text(ctx, desc, 11f, Ui.MUTED));
