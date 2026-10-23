@@ -1065,17 +1065,6 @@ public final class MainActivity extends Activity
     }
 
     @Override
-    protected void onDestroy() {
-        if (shareComposer != null && shareComposer.isShowing()) {
-            shareComposer.dismiss();
-        }
-        if (tactileDialog != null && tactileDialog.isShowing()) {
-            tactileDialog.dismiss();
-        }
-        super.onDestroy();
-    }
-
-    @Override
     public void onBackPressed() {
         if (currentTab == TAB_TABLE && !editVisible && stage.exitFocus()) return;
         if (editVisible) {
@@ -1249,6 +1238,11 @@ public final class MainActivity extends Activity
             shareComposer.setOnDismissListener(null);
             shareComposer.dismiss();
             shareComposer = null;
+        }
+        if (tactileDialog != null) {
+            tactileDialog.setOnDismissListener(null);
+            tactileDialog.dismiss();
+            tactileDialog = null;
         }
         // 共享 io 线程归 AppState，绝不在此 shutdown
         super.onDestroy();
