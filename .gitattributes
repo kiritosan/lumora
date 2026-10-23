@@ -1,0 +1,5 @@
+# 云端执行脚本必须 LF，Windows autocrlf 下防止混入 \r 破坏 shebang/set -euo
+*.sh text eol=lf
+gradlew text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf

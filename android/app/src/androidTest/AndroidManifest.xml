@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- framework 内置测试 runner；minSdk 设备上库必定存在，
+             required=false 仅为可移植性保险。instrumentation 元素由 AGP 生成 -->
+        <uses-library android:name="android.test.runner" android:required="false" />
+    </application>
+</manifest>

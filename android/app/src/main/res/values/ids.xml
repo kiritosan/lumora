@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="nav_home" type="id" />
+    <item name="nav_table" type="id" />
+    <item name="nav_mine" type="id" />
+    <item name="add_photo" type="id" />
+    <item name="backup_export" type="id" />
+    <item name="backup_restore" type="id" />
+</resources>

@@ -1,2 +1,13 @@
 __pycache__/
 *.pyc
+
+# Android 工程
+android/local.properties
+android/.gradle/
+android/**/build/
+android/keystore/
+android/artifacts/
+*.apk
+*.aab
+*.keystore
+*.p12

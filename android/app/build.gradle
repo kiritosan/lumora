@@ -1,0 +1,71 @@
+apply plugin: 'com.android.application'
+
+// 发布签名仅由 CNB 机密仓库 imports 注入的四个环境变量组成；
+// 缺任一项即视为未配置，assembleRelease 会显式失败（见下方守卫），
+// 绝不静默降级为未签名或 debug 签名包。
+def signEnv = ['LUMORA_KEYSTORE_B64', 'LUMORA_STORE_PASSWORD', 'LUMORA_KEY_ALIAS', 'LUMORA_KEY_PASSWORD']
+def signReady = signEnv.every { System.getenv(it)?.trim() }
+
+android {
+    namespace 'com.lumora.app'
+    compileSdk 34
+
+    // framework 可选测试库：legacy android.test.* 的编译期声明，
+    // 仅是测试编译所需，不打进应用运行时依赖
+    useLibrary 'android.test.runner'
+    useLibrary 'android.test.base'
+    useLibrary 'android.test.mock'
+
+    defaultConfig {
+        applicationId 'com.lumora.app'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+    }
+
+    signingConfigs {
+        release {
+            storeFile rootProject.file('keystore/cnb-release.p12')
+            storePassword System.getenv('LUMORA_STORE_PASSWORD') ?: ''
+            keyAlias System.getenv('LUMORA_KEY_ALIAS') ?: ''
+            keyPassword System.getenv('LUMORA_KEY_PASSWORD') ?: ''
+        }
+    }
+
+    buildTypes {
+        debug {
+            // debug 变体独立包名：测试/预览安装不触碰 release 数据
+            applicationIdSuffix '.debug'
+        }
+        release {
+            minifyEnabled false
+            if (signReady) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        // lint 是质量门：报告照常产出，错误必须修过而不是放行
+        abortOnError true
+    }
+}
+
+tasks.configureEach { t ->
+    if (t.name in ['assembleRelease', 'validateSigningRelease', 'packageRelease']) {
+        t.doFirst {
+            if (!signReady) {
+                throw new GradleException('Release 签名未配置：缺少 LUMORA_KEYSTORE_B64 / LUMORA_STORE_PASSWORD / '
+                    + 'LUMORA_KEY_ALIAS / LUMORA_KEY_PASSWORD。请在 CNB 机密仓库配置后通过 imports 注入'
+                    + '（Use CNB secret repository signing），本工程不做静默降级。')
+            }
+        }
+    }
+}

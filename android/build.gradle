@@ -1,0 +1,14 @@
+// 顶层构建脚本：只集中声明 AGP 版本。
+// 本机 Gradle 插件 marker 缓存缺失，故用 buildscript classpath + apply plugin
+// 而非 plugins{} DSL，保证 --offline 构建可解析。
+buildscript {
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.3.2'
+    }
+}

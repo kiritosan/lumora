@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RemoteViews 只允许基础控件 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_bg">
+
+    <ImageView
+        android:id="@+id/widget_art"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/widget_desc" />
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:fontFamily="serif"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="#183B38"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/widget_sub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:letterSpacing="0.2"
+        android:textColor="#7B8477"
+        android:textSize="10sp"
+        android:text="LUMORA / 今日一藏" />
+</LinearLayout>

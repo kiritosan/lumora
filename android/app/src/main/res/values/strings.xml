@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lumora</string>
+    <string name="widget_name">拾光 · 今日一藏</string>
+    <string name="widget_desc">你最近心动的藏品，安静地躺在桌面。</string>
+</resources>
