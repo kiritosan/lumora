@@ -44,7 +44,8 @@ public final class EditPanel extends FrameLayout {
 
     private ArtworkView preview;
     private EditText titleEt, noteEt;
-    private TextView titleCount, noteCount, errTv;
+    private TextView titleCount, noteCount, errTv, materialHint, promptTv;
+    private int promptIndex;
     private final TextView[] matChips = new TextView[Item.MATERIAL_COUNT];
     private Button saveB, cancelB, deleteB;
     private LinearLayout root;
@@ -69,7 +70,7 @@ public final class EditPanel extends FrameLayout {
         preview = new ArtworkView(ctx);
         preview.setInteractive(false);
         int ph = (int) (Ui.contentWidth(ctx) * 0.62f);
-        preview.setBackground(Ui.rounded(ctx, Ui.CARD, 16, Ui.LINE, 1));
+        preview.setBackground(Ui.glass(ctx, 24));
         preview.setClipToOutline(true);
         root.addView(preview, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ph));
@@ -95,6 +96,9 @@ public final class EditPanel extends FrameLayout {
             }
         }
         root.addView(mats);
+        root.addView(Ui.spacer(ctx, 8));
+        materialHint = Ui.text(ctx, Ui.materialDescription(material), 12, Ui.MUTED);
+        root.addView(materialHint);
         root.addView(Ui.spacer(ctx, 16));
 
         // 标题
@@ -126,6 +130,20 @@ public final class EditPanel extends FrameLayout {
         noteEt.setGravity(Gravity.TOP);
         noteEt.addTextChangedListener(counter(noteCount, Item.MAX_NOTE));
         root.addView(noteEt);
+        root.addView(Ui.spacer(ctx, 10));
+        LinearLayout inspiration = Ui.vbox(ctx);
+        inspiration.setPadding(Ui.dp(ctx, 14), Ui.dp(ctx, 12), Ui.dp(ctx, 14), Ui.dp(ctx, 12));
+        inspiration.setBackground(Ui.rounded(ctx, 0xFFE9EEE5, 16, null, 0));
+        inspiration.addView(Ui.eyebrow(ctx, "A LITTLE PROMPT · 手记灵感"));
+        promptTv = Ui.text(ctx, "", 13, Ui.INK_SOFT);
+        promptTv.setPadding(0, Ui.dp(ctx, 8), 0, Ui.dp(ctx, 4));
+        inspiration.addView(promptTv);
+        Button promptB = Ui.button(ctx, "换一个灵感 ↻", false);
+        promptB.setId(R.id.edit_prompt);
+        promptB.setOnClickListener(v -> { promptIndex++; refreshPrompt(); });
+        inspiration.addView(promptB);
+        refreshPrompt();
+        root.addView(inspiration);
         root.addView(Ui.spacer(ctx, 10));
 
         errTv = Ui.text(ctx, "", 13f, Ui.COPPER);
@@ -186,7 +204,29 @@ public final class EditPanel extends FrameLayout {
         };
     }
 
+    private void refreshPrompt() {
+        String[] prompts = {
+            "那时的光是什么颜色？空气里有什么气味？",
+            "这张照片以外，还有什么是你不想忘记的？",
+            "如果把这一刻寄给未来的自己，你想说什么？",
+            "今天的小小幸运，藏在画面的哪个角落？",
+            "是谁让这个平凡的瞬间，变得值得纪念？",
+            "试着给这一刻写一句只有你能读懂的话。"
+        };
+        promptTv.setText(prompts[Math.floorMod(promptIndex, prompts.length)]);
+    }
+
+    public boolean hasChanges() {
+        Item draft = peekDraft();
+        if (draft == null) return false;
+        if (isNew) return true;
+        return !java.util.Objects.equals(draft.title, original.title)
+            || !java.util.Objects.equals(draft.note, original.note)
+            || draft.material != original.material;
+    }
+
     private void refreshChips(Context ctx) {
+        materialHint.setText(Ui.materialDescription(material));
         for (int i = 0; i < matChips.length; i++) {
             Ui.restyleChip(ctx, matChips[i], i == material);
         }
@@ -245,6 +285,7 @@ public final class EditPanel extends FrameLayout {
         titleEt.setEnabled(!busy);
         noteEt.setEnabled(!busy);
         saveB.setEnabled(!busy);
+        saveB.setText(busy ? "正在入藏…" : (isNew ? "珍藏这一刻" : "保存修改"));
         cancelB.setEnabled(!busy);
         deleteB.setEnabled(!busy);
         for (TextView chip : matChips) chip.setEnabled(!busy);

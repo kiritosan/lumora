@@ -76,8 +76,8 @@ public final class MainActivity extends Activity
     private ProfilePanel mine;
     private EditPanel editPanel;
     private final TextView[] navLabels = new TextView[3];
-    private final View[] navBars = new View[3];
     private final View[] navCells = new View[3];
+    private final GalleryMark[] navIcons = new GalleryMark[3];
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -99,7 +99,7 @@ public final class MainActivity extends Activity
 
     private void buildRoot() {
         LinearLayout root = Ui.vbox(this);
-        root.setBackgroundColor(Ui.PAPER);
+        root.setBackground(Ui.canvasBackground());
 
         FrameLayout body = new FrameLayout(this);
         content = new FrameLayout(this);
@@ -115,7 +115,8 @@ public final class MainActivity extends Activity
 
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
-        nav.setBackgroundColor(Ui.CARD);
+        nav.setBackground(Ui.glass(this, 26));
+        nav.setElevation(Ui.dp(this, 14));
         nav.setShowDividers(LinearLayout.SHOW_DIVIDER_NONE);
         String[] names = {"藏馆", "光桌", "我的"};
         int[] ids = {R.id.nav_home, R.id.nav_table, R.id.nav_mine};
@@ -123,17 +124,14 @@ public final class MainActivity extends Activity
             final int tab = i;
             LinearLayout cell = Ui.vbox(this);
             cell.setGravity(Gravity.CENTER);
-            cell.setMinimumHeight(Ui.dp(this, 56));
+            cell.setMinimumHeight(Ui.dp(this, 64));
             cell.setId(ids[i]);
             cell.setClickable(true);
             cell.setFocusable(true);
-            View bar = new View(this);
-            bar.setBackgroundColor(Ui.COPPER);
-            LinearLayout.LayoutParams barLp =
-                new LinearLayout.LayoutParams(Ui.dp(this, 28), Ui.dp(this, 3));
-            bar.setVisibility(View.INVISIBLE);
-            cell.addView(bar, barLp);
-            TextView label = Ui.text(this, names[i], 14f, Ui.MUTED);
+            GalleryMark icon = new GalleryMark(this, i);
+            cell.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, 26), Ui.dp(this, 26)));
+            navIcons[i] = icon;
+            TextView label = Ui.text(this, names[i], 13f, Ui.MUTED);
             label.setGravity(Gravity.CENTER);
             cell.addView(label, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -143,23 +141,26 @@ public final class MainActivity extends Activity
                     Ui.toast(this, "正在保存，请稍候");
                     return; // 有在途写盘：不切页不丢草稿
                 }
-                if (editVisible) cancelEdit();
+                if (editVisible) {
+                    requestDiscard(() -> {
+                        tableIsDetail = false;
+                        switchTab(tab);
+                    });
+                    return;
+                }
                 tableIsDetail = false;
                 switchTab(tab);
             });
             nav.addView(cell, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
             navLabels[i] = label;
-            navBars[i] = bar;
             navCells[i] = cell;
         }
         LinearLayout navWrap = Ui.vbox(this);
-        View rule = new View(this);
-        rule.setBackgroundColor(Ui.LINE);
-        navWrap.addView(rule, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, Ui.dp(this, 0.75f))));
+        navWrap.setPadding(Ui.dp(this, 16), Ui.dp(this, 4),
+            Ui.dp(this, 16), Ui.dp(this, 8));
         navWrap.addView(nav, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 58)));
+            ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 64)));
         root.addView(navWrap);
 
         setContentView(root);
@@ -178,7 +179,7 @@ public final class MainActivity extends Activity
             navLabels[i].setTypeface(on
                 ? android.graphics.Typeface.DEFAULT_BOLD
                 : android.graphics.Typeface.DEFAULT);
-            navBars[i].setVisibility(on ? View.VISIBLE : View.INVISIBLE);
+            navIcons[i].setSelected(on);
             if (navCells[i] != null) navCells[i].setSelected(on);
             Object parent = navLabels[i].getParent();
             if (parent instanceof View) {
@@ -627,10 +628,27 @@ public final class MainActivity extends Activity
 
     @Override
     public void onCancelDraft(boolean isNew, String staged) {
+        requestDiscard(null);
+    }
+
+    private void requestDiscard(Runnable after) {
         if (app.isBusy()) {
             Ui.toast(this, "正在处理中，请稍候");
             return;
         }
+        Runnable discard = () -> {
+            discardDraft(editIsNew, stagedPhoto);
+            if (after != null) after.run();
+        };
+        if (editPanel.hasChanges()) {
+            new AlertDialog.Builder(this).setTitle("离开这份手记？")
+                .setMessage("尚未保存的修改会被舍弃。你也可以继续编辑，把这一刻好好留下。")
+                .setNegativeButton("继续编辑", null)
+                .setPositiveButton("舍弃修改", (d, w) -> discard.run()).show();
+        } else discard.run();
+    }
+
+    private void discardDraft(boolean isNew, String staged) {
         if (isNew && staged != null) {
             final String s = staged;
             app.io().execute(() -> AppState.discardPhotoIfUnreferenced(
@@ -980,6 +998,7 @@ public final class MainActivity extends Activity
 
     @Override
     public void onBackPressed() {
+        if (currentTab == TAB_TABLE && !editVisible && stage.exitFocus()) return;
         if (editVisible) {
             cancelEdit();
             return;
@@ -1021,6 +1040,8 @@ public final class MainActivity extends Activity
         if (savingDraftId != null) out.putString("savingDraftId", savingDraftId);
         if (deferredIntent != null) out.putParcelable("deferredIntent", deferredIntent);
         home.saveState(out);
+        mine.saveState(out);
+        stage.saveState(out);
     }
 
     private void restoreSaved(Bundle in) {
@@ -1033,6 +1054,8 @@ public final class MainActivity extends Activity
         home.restoreState(in);
         refreshAll();
         if (selectedId != null) stage.show(selectedId);
+        mine.restoreState(in);
+        stage.restoreState(in);
 
         if (in.getBoolean("editVisible", false)) {
             editIsNew = in.getBoolean("editIsNew", false);

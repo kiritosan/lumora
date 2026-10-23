@@ -1,6 +1,9 @@
 package com.lumora.app;
 
 import android.content.Context;
+import android.app.AlertDialog;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.text.Editable;
@@ -67,6 +70,10 @@ public final class HomePanel extends ScrollView {
     private android.widget.Button addB;
 
     private Item featured;
+    private int sort = CollectionInsights.NEWEST;
+    private boolean timeline = false;
+    private TextView resultCount, sortControl, galleryControl, timelineControl, summary;
+    private TextView featuredNote;
 
     public HomePanel(Context ctx, Host host, ImageRepository repo, Executor io) {
         super(ctx);
@@ -100,11 +107,14 @@ public final class HomePanel extends ScrollView {
         TextView heading = Ui.serif(ctx, "把片刻，\n藏进光里。", 34f, Ui.INK);
         heading.setLineSpacing(Ui.dp(ctx, 6), 1f);
         content.addView(heading);
-        content.addView(Ui.spacer(ctx, 18));
+        content.addView(Ui.spacer(ctx, 12));
+        summary = Ui.text(ctx, "每一个平凡的日子，都有值得收藏的光。", 12f, Ui.MUTED);
+        content.addView(summary);
+        content.addView(Ui.spacer(ctx, 20));
 
         // 搜索
         search = new EditText(ctx);
-        search.setHint("搜标题或手记…");
+        search.setHint("搜标题、手记或编号…");
         search.setHintTextColor(Ui.MUTED);
         search.setTextColor(Ui.INK);
         search.setTextSize(14f);
@@ -121,6 +131,14 @@ public final class HomePanel extends ScrollView {
                 render();
             }
             public void afterTextChanged(Editable s) { }
+        });
+        search.setOnEditorActionListener((v, action, event) -> {
+            if (action != EditorInfo.IME_ACTION_SEARCH) return false;
+            android.view.inputmethod.InputMethodManager keyboard =
+                (android.view.inputmethod.InputMethodManager) ctx.getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (keyboard != null) keyboard.hideSoftInputFromWindow(search.getWindowToken(), 0);
+            search.clearFocus();
+            return true;
         });
         content.addView(search, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -141,7 +159,8 @@ public final class HomePanel extends ScrollView {
 
         // 精选卡
         featuredCard = new FrameLayout(ctx);
-        featuredCard.setBackground(Ui.rounded(ctx, Ui.CARD, 20, Ui.LINE, 1));
+        featuredCard.setBackground(Ui.glass(ctx, 26));
+        featuredCard.setElevation(Ui.dp(ctx, 7));
         featuredCard.setClipToOutline(true);
         featuredArt = new ArtworkView(ctx);
         featuredArt.setInteractive(false);
@@ -160,12 +179,50 @@ public final class HomePanel extends ScrollView {
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         ftp.topMargin = featH;
         featuredCard.addView(ft, ftp);
+        featuredNote = Ui.text(ctx, "", 12f, Ui.MUTED);
+        featuredNote.setMaxLines(2);
+        featuredNote.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        ft.addView(Ui.spacer(ctx, 6));
+        ft.addView(featuredNote);
+        Ui.touchSurface(ctx, featuredCard, 26);
         featuredCard.setOnClickListener(v -> {
             if (featured != null) host.onOpen(featured);
         });
         content.addView(Ui.spacer(ctx, 20));
 
-        content.addView(Ui.eyebrow(ctx, "COLLECTION · 藏馆"));
+        LinearLayout collectionHeading = Ui.hbox(ctx);
+        collectionHeading.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        collectionHeading.addView(Ui.eyebrow(ctx, "COLLECTION · 藏馆"),
+            new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        resultCount = Ui.text(ctx, "", 12f, Ui.MUTED);
+        resultCount.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        collectionHeading.addView(resultCount);
+        content.addView(collectionHeading);
+        content.addView(Ui.spacer(ctx, 10));
+        LinearLayout controls = Ui.hbox(ctx);
+        galleryControl = Ui.chip(ctx, "画廊", true);
+        galleryControl.setId(R.id.view_gallery);
+        timelineControl = Ui.chip(ctx, "时间档案", false);
+        timelineControl.setId(R.id.view_timeline);
+        galleryControl.setOnClickListener(v -> setTimeline(false));
+        timelineControl.setOnClickListener(v -> setTimeline(true));
+        controls.addView(galleryControl, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.8f));
+        controls.addView(gap(ctx));
+        controls.addView(timelineControl, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.1f));
+        controls.addView(gap(ctx));
+        sortControl = Ui.chip(ctx, "最近入藏 ▾", false);
+        sortControl.setId(R.id.collection_sort);
+        sortControl.setOnClickListener(v -> new AlertDialog.Builder(ctx)
+            .setTitle("藏馆排序")
+            .setSingleChoiceItems(timeline
+                ? new String[]{"最近入藏", "最早入藏"} : CollectionInsights.SORT_NAMES,
+                sort, (dialog, which) -> {
+                    sort = which;
+                    dialog.dismiss();
+                    render();
+                }).setNegativeButton("取消", null).show());
+        controls.addView(sortControl, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f));
+        content.addView(controls);
         content.addView(Ui.spacer(ctx, 12));
 
         grid = Ui.vbox(ctx);
@@ -204,6 +261,8 @@ public final class HomePanel extends ScrollView {
     // ---- 状态保存/恢复（搜索词 + 筛选 + 滚动）----
 
     public void saveState(Bundle out) {
+        out.putInt("homeSort", sort);
+        out.putBoolean("homeTimeline", timeline);
         out.putString("homeQuery", query);
         out.putBoolean("homeFav", onlyFav);
         out.putInt("homeMat", material == null ? -1 : material);
@@ -211,6 +270,9 @@ public final class HomePanel extends ScrollView {
     }
 
     public void restoreState(Bundle in) {
+        sort = Math.max(0, Math.min(3, in.getInt("homeSort", 0)));
+        timeline = in.getBoolean("homeTimeline", false);
+        if (timeline && sort > CollectionInsights.OLDEST) sort = CollectionInsights.NEWEST;
         query = in.getString("homeQuery", "");
         onlyFav = in.getBoolean("homeFav", false);
         int m = in.getInt("homeMat", -1);
@@ -223,19 +285,14 @@ public final class HomePanel extends ScrollView {
     }
 
     private List<Item> filtered() {
-        List<Item> out = new ArrayList<>();
-        for (Item it : all) {
-            if (onlyFav && !it.favorite) continue;
-            if (material != null && it.material != material) continue;
-            if (!query.isEmpty()) {
-                String q = query.toLowerCase();
-                String hay = ((it.title == null ? "" : it.title)
-                    + " " + (it.note == null ? "" : it.note)).toLowerCase();
-                if (!hay.contains(q)) continue;
-            }
-            out.add(it);
-        }
-        return out;
+        return CollectionInsights.select(all, query, onlyFav, material, sort);
+    }
+
+    private void setTimeline(boolean enabled) {
+        timeline = enabled;
+        if (timeline && sort > CollectionInsights.OLDEST) sort = CollectionInsights.NEWEST;
+        Ui.haptic(getContext(), enabled ? timelineControl : galleryControl);
+        render();
     }
 
     private void renderChips(Context ctx) {
@@ -271,6 +328,10 @@ public final class HomePanel extends ScrollView {
         final int gen = ++bindGen;
         Context ctx = getContext();
         addB.setEnabled(!loading && storeError == null);
+        Ui.restyleChip(ctx, galleryControl, !timeline);
+        Ui.restyleChip(ctx, timelineControl, timeline);
+        sortControl.setText(CollectionInsights.SORT_NAMES[sort] + " ▾");
+        resultCount.setText(loading ? "整理中" : (storeError != null ? "暂不可用" : ""));
 
         if (loading && storeError == null) {
             featuredCard.setVisibility(GONE);
@@ -290,22 +351,31 @@ public final class HomePanel extends ScrollView {
         List<Item> items = filtered();
         boolean searching = !query.isEmpty() || onlyFav || material != null;
 
-        // 精选：第一个结果
-        if (items.isEmpty()) {
+        resultCount.setText(searching ? items.size() + " / " + all.size() + " 件" : all.size() + " 件藏品");
+        int personal = 0;
+        for (Item item : all) if (!item.sample) personal++;
+        summary.setText(personal == 0 ? "从一束光开始，慢慢建起你的私人藏馆。"
+            : "已珍藏 " + personal + " 个片刻 · 在 " + CollectionInsights.activeDays(all) + " 个日子里发现光");
+
+        // A daily reunion, independent of sort and hidden while narrowing results.
+        if (items.isEmpty() || searching || timeline) {
             featured = null;
             featuredCard.setVisibility(GONE);
         } else {
-            featured = items.get(0);
+            featured = CollectionInsights.daily(all, LocalDate.now());
             featuredCard.setVisibility(VISIBLE);
             featuredCard.setContentDescription("精选藏品 " + featured.title);
             featuredMeta.setText((featured.favorite ? "♥ 今日一藏 · " : "今日一藏 · ")
                 + featured.serial() + " · " + Ui.materialName(featured.material)
                 + (featured.sample ? " · 示例" : ""));
             featuredTitle.setText(featured.title == null ? "" : featured.title);
+            featuredNote.setText(featured.note == null || featured.note.trim().isEmpty()
+                ? "与收藏里的光，再相遇一次。" : featured.note);
+            featuredArt.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             bindThumb(featuredArt, featured, gen);
         }
 
-        // 网格：其余藏品两列
+        // Every item remains present in the archive, including the daily feature.
         grid.removeAllViews();
         if (items.isEmpty()) {
             stateTv.setVisibility(VISIBLE);
@@ -327,10 +397,24 @@ public final class HomePanel extends ScrollView {
             stateTv.setVisibility(GONE);
         }
 
+        if (timeline) {
+            String previousMonth = "";
+            for (Item it : items) {
+                String month = CollectionInsights.monthLabel(YearMonth.from(CollectionInsights.date(it.created)));
+                if (!month.equals(previousMonth)) {
+                    TextView monthTitle = Ui.serifBold(ctx, month, 21, Ui.INK);
+                    monthTitle.setPadding(0, Ui.dp(ctx, 18), 0, Ui.dp(ctx, 12));
+                    grid.addView(monthTitle);
+                    previousMonth = month;
+                }
+                grid.addView(makeTimelineCard(ctx, it, gen));
+            }
+            return;
+        }
         LinearLayout row = null;
-        for (int i = 1; i < items.size(); i++) {
+        for (int i = 0; i < items.size(); i++) {
             Item it = items.get(i);
-            if ((i - 1) % 2 == 0) {
+            if (i % 2 == 0) {
                 row = Ui.hbox(ctx);
                 LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -338,7 +422,7 @@ public final class HomePanel extends ScrollView {
                 grid.addView(row, rlp);
             }
             row.addView(makeCard(ctx, it, gen), cellLp(ctx));
-            if ((i - 1) % 2 == 0) {
+            if (i % 2 == 0) {
                 row.addView(gap(ctx));
                 if (i == items.size() - 1) {
                     // 奇数末行只有左列：补等权占位，卡片不撑满
@@ -390,8 +474,10 @@ public final class HomePanel extends ScrollView {
 
     private View makeCard(Context ctx, Item it, int gen) {
         LinearLayout card = Ui.vbox(ctx);
-        card.setBackground(Ui.rounded(ctx, Ui.CARD, 16, Ui.LINE, 1));
+        card.setBackground(Ui.glass(ctx, 22));
+        card.setElevation(Ui.dp(ctx, 4));
         card.setClipToOutline(true);
+        Ui.touchSurface(ctx, card, 22);
         card.setClickable(true);
         card.setFocusable(true);
         card.setContentDescription("藏品 " + (it.title == null ? "" : it.title)
@@ -406,7 +492,8 @@ public final class HomePanel extends ScrollView {
         LinearLayout meta = Ui.vbox(ctx);
         meta.setPadding(Ui.dp(ctx, 12), Ui.dp(ctx, 10), Ui.dp(ctx, 12), Ui.dp(ctx, 12));
         TextView t = Ui.serifBold(ctx, it.title == null ? "" : it.title, 15f, Ui.INK);
-        t.setMaxLines(1);
+        t.setMaxLines(2);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
         meta.addView(t);
         meta.addView(Ui.spacer(ctx, 3));
         meta.addView(Ui.eyebrow(ctx,
@@ -417,6 +504,40 @@ public final class HomePanel extends ScrollView {
         card.setOnClickListener(v -> host.onOpen(it));
         bindThumb(thumb, it, gen);
         return card;
+    }
+
+    private View makeTimelineCard(Context ctx, Item it, int gen) {
+        LinearLayout row = Ui.hbox(ctx);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(Ui.dp(ctx, 10), Ui.dp(ctx, 10), Ui.dp(ctx, 12), Ui.dp(ctx, 10));
+        row.setBackground(Ui.glass(ctx, 20));
+        Ui.touchSurface(ctx, row, 20);
+        ArtworkView thumb = new ArtworkView(ctx);
+        thumb.setInteractive(false);
+        thumb.setBackground(Ui.rounded(ctx, Ui.PAPER, 12, null, 0));
+        thumb.setClipToOutline(true);
+        row.addView(thumb, new LinearLayout.LayoutParams(Ui.dp(ctx, 76), Ui.dp(ctx, 88)));
+        LinearLayout text = Ui.vbox(ctx);
+        text.setPadding(Ui.dp(ctx, 14), 0, 0, 0);
+        text.addView(Ui.eyebrow(ctx, Ui.dateCompact(it.created) + (it.favorite ? " · ♥" : "")));
+        TextView title = Ui.serifBold(ctx, it.title, 17, Ui.INK);
+        title.setMaxLines(2);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        text.addView(title);
+        TextView note = Ui.text(ctx, it.note == null || it.note.isEmpty()
+            ? Ui.materialName(it.material) + " · " + it.serial() : it.note, 12, Ui.MUTED);
+        note.setMaxLines(2);
+        note.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        text.addView(note);
+        row.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        row.setContentDescription(Ui.dateStr(it.created) + "，" + it.title + "，" + Ui.materialName(it.material));
+        row.setOnClickListener(v -> host.onOpen(it));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = Ui.dp(ctx, 10);
+        row.setLayoutParams(lp);
+        bindThumb(thumb, it, gen);
+        return row;
     }
 
     /**

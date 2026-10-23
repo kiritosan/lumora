@@ -68,4 +68,30 @@ public final class StagePanelTest extends InstrumentationTestCase {
         onMain(() -> panel.setItems(new ArrayList<Item>(), null));
         assertNull(selected.get());
     }
+
+    public void testFocusExitAndReadOnlyShuffle() throws Throwable {
+        List<Item> its = items(3);
+        final String originalTitle = its.get(0).title;
+        onMain(() -> {
+            panel.setItems(its, its.get(0).id);
+            panel.findViewById(R.id.stage_focus).performClick();
+        });
+        assertTrue(panel.isFocused());
+        onMain(() -> assertTrue(panel.exitFocus()));
+        assertFalse(panel.isFocused());
+        onMain(() -> panel.findViewById(R.id.stage_shuffle).performClick());
+        assertFalse(its.get(0).id.equals(selected.get()));
+        assertEquals(originalTitle, its.get(0).title);
+        assertFalse(its.get(0).favorite);
+    }
+
+    public void testEmptyCollectionClosesFocus() throws Throwable {
+        onMain(() -> {
+            panel.setItems(items(1), null);
+            panel.findViewById(R.id.stage_focus).performClick();
+            panel.setItems(new ArrayList<Item>(), null);
+        });
+        assertFalse(panel.isFocused());
+        assertFalse(panel.findViewById(R.id.stage_focus).isEnabled());
+    }
 }

@@ -6,4 +6,13 @@
     <item name="add_photo" type="id" />
     <item name="backup_export" type="id" />
     <item name="backup_restore" type="id" />
+    <item name="view_gallery" type="id" />
+    <item name="view_timeline" type="id" />
+    <item name="collection_sort" type="id" />
+    <item name="calendar_previous" type="id" />
+    <item name="calendar_next" type="id" />
+    <item name="stage_focus" type="id" />
+    <item name="stage_shuffle" type="id" />
+    <item name="stage_flip" type="id" />
+    <item name="edit_prompt" type="id" />
 </resources>

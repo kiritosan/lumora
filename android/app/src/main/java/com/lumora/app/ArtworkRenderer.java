@@ -387,20 +387,28 @@ public final class ArtworkRenderer {
         c.drawRect(0, 0, w, h, g);
     }
 
-    /** 追光箔面：随倾斜偏移的香槟色径向高光。 */
+    /** 集中的柔光与斜向箔带，二者一起移动，照片和暗色作品上也可见。 */
     private static void drawFoil(Canvas c, int w, int h, float tiltX, float tiltY, int material) {
         float nx = tiltX / 8f, ny = tiltY / 8f; // 已钳制 ±8deg
-        float cx = w * (0.5f + nx * 0.34f);
-        float cy = h * (0.42f + ny * 0.34f);
-        float rad = Math.max(w, h) * 0.9f;
+        float cx = w * (0.5f + nx * 0.54f);
+        float cy = h * (0.42f + ny * 0.52f);
+        float rad = Math.max(w, h) * 0.47f;
         int centerColor = material == Item.MATERIAL_SEA
-            ? Color.argb(70, 0xDF, 0xF0, 0xEE)
-            : Color.argb(80, 0xF6, 0xE7, 0xBE);
+            ? Color.argb(145, 0xDF, 0xF0, 0xEE)
+            : Color.argb(150, 0xFF, 0xF0, 0xCC);
         Paint f = new Paint(Paint.ANTI_ALIAS_FLAG);
         f.setShader(new RadialGradient(cx, cy, rad, centerColor, Color.TRANSPARENT,
             Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, f);
         f.setShader(null);
+
+        Paint streak = new Paint(Paint.ANTI_ALIAS_FLAG);
+        streak.setShader(new LinearGradient(cx - w * 0.35f, cy - h * 0.2f,
+            cx + w * 0.35f, cy + h * 0.2f,
+            new int[] {Color.TRANSPARENT, Color.argb(65, 0xFF, 0xF7, 0xDD),
+                Color.TRANSPARENT}, new float[] {0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+        c.drawRect(0, 0, w, h, streak);
+        streak.setShader(null);
 
         // 边缘暗角，收拢视线
         Paint v = new Paint(Paint.ANTI_ALIAS_FLAG);

@@ -4,6 +4,8 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.content.res.ColorStateList;
 import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -20,14 +22,14 @@ import java.util.Locale;
 /** 视觉常量与程序化 UI 小工具：暖纸/墨青/苔灰/铜/香槟。 */
 public final class Ui {
 
-    public static final int PAPER = 0xFFF5F1E8;
+    public static final int PAPER = 0xFFF7F5F0;
     public static final int INK = 0xFF183B38;
     public static final int INK_SOFT = 0xFF2E4A47;
-    public static final int MUTED = 0xFF7B8477;
+    public static final int MUTED = 0xFF667265;
     public static final int COPPER = 0xFFAF7449;
     public static final int CHAMPAGNE = 0xFFD6B675;
-    public static final int CARD = 0xFFFCF9F1;
-    public static final int LINE = 0xFFE3DCC9;
+    public static final int CARD = 0xFFFFFDF8;
+    public static final int LINE = 0xFFE5E6DF;
 
     private static final String[] MATERIAL_NAMES = {"蜜金", "海盐", "银雾"};
 
@@ -71,11 +73,27 @@ public final class Ui {
         return g;
     }
 
+    /** Warm translucent surface: layered rather than flat, with an optical edge. */
+    public static GradientDrawable glass(Context c, float radius) {
+        GradientDrawable g = new GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            new int[] {0xFFFFFFFF, 0xF5FFFEFA, 0xEBE8EDE7});
+        g.setCornerRadius(dp(c, radius));
+        g.setStroke(Math.max(1, dp(c, 1)), 0xDDFFFFFF);
+        return g;
+    }
+
+    public static GradientDrawable canvasBackground() {
+        return new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            new int[] {0xFFF8F5EF, 0xFFF3F5F0, 0xFFECEFE9});
+    }
+
     public static TextView text(Context c, String s, float sp, int color) {
         TextView t = new TextView(c);
         t.setText(s);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         t.setTextColor(color);
+        t.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         t.setIncludeFontPadding(true);
         return t;
     }
@@ -114,9 +132,11 @@ public final class Ui {
             b.setBackground(rounded(c, INK, 24, null, 0));
             b.setTextColor(PAPER);
         } else {
-            b.setBackground(rounded(c, Color.TRANSPARENT, 24, MUTED, 1));
+            b.setBackground(glass(c, 24));
             b.setTextColor(INK);
         }
+        b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x247F937F),
+            b.getBackground(), rounded(c, 0xFFFFFFFF, 24, null, 0)));
         return b;
     }
 
@@ -137,7 +157,7 @@ public final class Ui {
         t.setSelected(selected);
         t.setContentDescription(t.getText()
             + (selected ? "（已选中）" : ""));
-        t.setBackground(rounded(c, selected ? INK : CARD, 20, selected ? INK : LINE, 1));
+        t.setBackground(selected ? rounded(c, INK, 20, null, 0) : glass(c, 20));
     }
 
     public static View hairline(Context c) {
@@ -171,6 +191,21 @@ public final class Ui {
     public static int contentWidth(Context c) {
         int sw = c.getResources().getDisplayMetrics().widthPixels;
         return Math.min(sw, dp(c, 720));
+    }
+
+    public static String materialDescription(int material) {
+        switch (material) {
+            case Item.MATERIAL_SEA: return "海盐 · 把海风留在青蓝的釉面里";
+            case Item.MATERIAL_MIST: return "银雾 · 像清晨薄雾，安静而柔和";
+            default: return "蜜金 · 为日常镀上一层温暖的琥珀光";
+        }
+    }
+
+    /** Actionable cards get the same optical touch feedback as buttons. */
+    public static void touchSurface(Context c, View v, float radius) {
+        v.setForeground(new RippleDrawable(ColorStateList.valueOf(0x227F937F), null,
+            rounded(c, 0xFFFFFFFF, radius, null, 0)));
+        v.setFocusable(true);
     }
 
     /** 动画总开关（animator_duration_scale=0 → 立即到位）。 */

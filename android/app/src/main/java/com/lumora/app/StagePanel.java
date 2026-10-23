@@ -54,6 +54,12 @@ public final class StagePanel extends FrameLayout {
     private TextView favB;
     private LinearLayout content;
     private LinearLayout emptyBox;
+    private ScrollView mainScroll;
+    private LinearLayout focusBox;
+    private ArtworkView focusArt;
+    private TextView focusTitle, focusMeta, positionTv;
+    private Button focusB, shuffleB, focusPrev, focusNext;
+    private boolean focused;
 
     public StagePanel(Context ctx, Host host, ImageRepository repo, Executor io) {
         super(ctx);
@@ -65,6 +71,7 @@ public final class StagePanel extends FrameLayout {
 
     private void build(Context ctx) {
         ScrollView scroll = new ScrollView(ctx);
+        mainScroll = scroll;
         scroll.setFillViewport(true);
         content = Ui.vbox(ctx);
         content.setPadding(Ui.dp(ctx, 22), Ui.dp(ctx, 18), Ui.dp(ctx, 22), Ui.dp(ctx, 28));
@@ -73,16 +80,20 @@ public final class StagePanel extends FrameLayout {
 
         content.addView(Ui.eyebrow(ctx, "LIGHT TABLE · 光桌"));
         content.addView(Ui.spacer(ctx, 12));
+        TextView hint = Ui.text(ctx, "轻触画面，或缓缓转动手机，让光掠过藏品", 12f, Ui.MUTED);
+        content.addView(hint);
+        content.addView(Ui.spacer(ctx, 14));
 
         // 卡面：正面画作 / 背面手记（背面可滚动，手记再长也读得完）
         cardFace = new FrameLayout(ctx);
         int artH = (int) (Ui.contentWidth(ctx) * 1.15f);
-        FrameLayout.LayoutParams cardLp =
-            new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, artH);
+        LinearLayout.LayoutParams cardLp =
+            new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, artH);
         cardFace.setLayoutParams(cardLp);
 
         art = new ArtworkView(ctx);
-        art.setBackground(Ui.rounded(ctx, Ui.CARD, 18, Ui.LINE, 1));
+        art.setBackground(Ui.glass(ctx, 26));
+        art.setElevation(Ui.dp(ctx, 8));
         art.setClipToOutline(true);
         cardFace.addView(art, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -120,6 +131,7 @@ public final class StagePanel extends FrameLayout {
         LinearLayout row1 = Ui.hbox(ctx);
         prevB = Ui.button(ctx, "‹ 上一张", false);
         flipB = Ui.button(ctx, "翻面", false);
+        flipB.setId(R.id.stage_flip);
         nextB = Ui.button(ctx, "下一张 ›", false);
         row1.addView(prevB, weightLp());
         row1.addView(hgap(ctx));
@@ -141,6 +153,26 @@ public final class StagePanel extends FrameLayout {
         row2.addView(shareB, weightLp());
         content.addView(row2);
         content.addView(Ui.spacer(ctx, 16));
+        LinearLayout experience = Ui.hbox(ctx);
+        focusB = Ui.button(ctx, "静观 · 沉浸赏光", false);
+        focusB.setId(R.id.stage_focus);
+        shuffleB = Ui.button(ctx, "随机重逢", false);
+        shuffleB.setId(R.id.stage_shuffle);
+        experience.addView(focusB, weightLp());
+        experience.addView(hgap(ctx));
+        experience.addView(shuffleB, weightLp());
+        content.addView(experience);
+        positionTv = Ui.text(ctx, "", 11, Ui.MUTED);
+        positionTv.setGravity(android.view.Gravity.CENTER);
+        positionTv.setPadding(0, Ui.dp(ctx, 14), 0, 0);
+        content.addView(positionTv);
+        focusB.setOnClickListener(v -> enterFocus());
+        shuffleB.setOnClickListener(v -> {
+            if (order.size() < 2) return;
+            int next = java.util.concurrent.ThreadLocalRandom.current().nextInt(order.size() - 1);
+            if (next >= index) next++;
+            move(next - index);
+        });
 
         emptyBox = Ui.vbox(ctx);
         emptyBox.setVisibility(GONE);
@@ -161,6 +193,7 @@ public final class StagePanel extends FrameLayout {
             Item cur = current();
             if (cur != null) host.onShare(cur);
         });
+        buildFocus(ctx);
     }
 
     private static LinearLayout.LayoutParams weightLp() {
@@ -230,7 +263,8 @@ public final class StagePanel extends FrameLayout {
 
     private void applyMotion() {
         // 传感器只在正面画作可见、面板前台且有藏品时注册
-        art.setMotionActive(panelShown && !backShown && current() != null);
+        art.setMotionActive(panelShown && !focused && !backShown && current() != null);
+        focusArt.setMotionActive(panelShown && focused && current() != null);
     }
 
     private void move(int d) {
@@ -282,10 +316,12 @@ public final class StagePanel extends FrameLayout {
         backScroll.setRotationY(0f);
         art.setVisibility(backShown ? GONE : VISIBLE);
         backScroll.setVisibility(backShown ? VISIBLE : GONE);
+        flipB.setText(backShown ? "看画作" : "翻面");
     }
 
     private void bind() {
         Context ctx = getContext();
+        ++loadGen;
         resetFace();
         if (storeError != null) {
             showEmpty(storeError, null);
@@ -303,6 +339,15 @@ public final class StagePanel extends FrameLayout {
         }
         emptyBox.setVisibility(GONE);
 
+        focusTitle.setText(it.title);
+        focusMeta.setText(Ui.materialName(it.material) + " · " + Ui.dateCompact(it.created));
+        positionTv.setText(String.format(java.util.Locale.ROOT, "%02d / %02d · 每一件，都值得慢慢看", index + 1, order.size()));
+        focusB.setEnabled(true);
+        shuffleB.setEnabled(order.size() > 1);
+        focusPrev.setEnabled(index > 0);
+        focusNext.setEnabled(index < order.size() - 1);
+        focusPrev.setAlpha(index > 0 ? 1 : 0.4f);
+        focusNext.setAlpha(index < order.size() - 1 ? 1 : 0.4f);
         serialTv.setText(it.serial() + " · " + Ui.materialName(it.material)
             + (it.sample ? " · 示例" : ""));
         titleTv.setText(it.title == null ? "" : it.title);
@@ -311,8 +356,8 @@ public final class StagePanel extends FrameLayout {
         noteTv.setText(it.note == null || it.note.isEmpty() ? "（还没有手记）" : it.note);
         metaTv.setText("编号 " + it.serial() + "　材质 " + Ui.materialName(it.material)
             + "　入藏 " + Ui.dateCompact(it.created));
-        Ui.restyleChip(ctx, favB, it.favorite);
         favB.setText(it.favorite ? "♥ 已心动" : "♡ 心动");
+        Ui.restyleChip(ctx, favB, it.favorite);
 
         prevB.setEnabled(index > 0);
         nextB.setEnabled(index < order.size() - 1);
@@ -328,13 +373,12 @@ public final class StagePanel extends FrameLayout {
             final String name = it.photoName;
             Bitmap cached = repo.peekThumb(name, 1200);
             if (cached != null) {
-                art.setPhotoState(ArtworkRenderer.PHOTO_OK);
-                art.setItem(it, cached);
+                setArtwork(it, cached, ArtworkRenderer.PHOTO_OK);
             } else {
-                art.setItem(it, null);
+                setArtwork(it, null, ArtworkRenderer.PHOTO_LOADING);
                 java.io.File f = repo.photoFile(name);
                 if (f == null || !f.exists()) {
-                    art.setPhotoState(ArtworkRenderer.PHOTO_FAILED);
+                    setArtwork(it, null, ArtworkRenderer.PHOTO_FAILED);
                 } else {
                     art.setPhotoState(ArtworkRenderer.PHOTO_LOADING);
                     final int gen = ++loadGen;
@@ -346,20 +390,108 @@ public final class StagePanel extends FrameLayout {
                             if (gen != loadGen) return;       // 已切走
                             Item cur = current();
                             if (cur == null || !name.equals(cur.photoName)) return;
-                            art.setPhotoState(state);
-                            if (bmp != null) art.setItem(cur, bmp);
+                            setArtwork(cur, bmp, state);
                         });
                     });
                 }
             }
         } else {
-            art.setPhotoState(ArtworkRenderer.PHOTO_OK);
-            art.setItem(it, null);
+            setArtwork(it, null, ArtworkRenderer.PHOTO_OK);
         }
         applyMotion();
     }
 
+    private void setArtwork(Item item, Bitmap bitmap, int state) {
+        art.setPhotoState(state);
+        art.setItem(item, bitmap);
+        focusArt.setPhotoState(state);
+        focusArt.setItem(item, bitmap);
+    }
+
+    private void buildFocus(Context ctx) {
+        focusBox = Ui.vbox(ctx);
+        focusBox.setBackgroundColor(0xFF102C29);
+        focusBox.setPadding(Ui.dp(ctx, 22), Ui.dp(ctx, 18), Ui.dp(ctx, 22), Ui.dp(ctx, 22));
+        LinearLayout top = Ui.hbox(ctx);
+        top.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        TextView label = Ui.eyebrow(ctx, "STILL · 静观");
+        label.setTextColor(Ui.CHAMPAGNE);
+        top.addView(label, weightLp());
+        Button close = Ui.button(ctx, "退出静观", false);
+        close.setOnClickListener(v -> exitFocus());
+        top.addView(close);
+        focusBox.addView(top);
+        focusBox.addView(Ui.spacer(ctx, 22));
+        focusArt = new ArtworkView(ctx);
+        focusArt.setBackground(Ui.rounded(ctx, Ui.INK, 22, null, 0));
+        focusArt.setClipToOutline(true);
+        focusBox.addView(focusArt, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        focusBox.addView(Ui.spacer(ctx, 18));
+        focusTitle = Ui.serif(ctx, "", 25, Ui.PAPER);
+        focusTitle.setMaxLines(2);
+        focusTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        focusBox.addView(focusTitle);
+        focusMeta = Ui.text(ctx, "", 12, 0xFFCDD4C6);
+        focusBox.addView(focusMeta);
+        focusBox.addView(Ui.spacer(ctx, 16));
+        LinearLayout navigation = Ui.hbox(ctx);
+        focusPrev = Ui.button(ctx, "‹ 上一张", false);
+        focusNext = Ui.button(ctx, "下一张 ›", false);
+        focusPrev.setOnClickListener(v -> move(-1));
+        focusNext.setOnClickListener(v -> move(1));
+        navigation.addView(focusPrev, weightLp());
+        navigation.addView(hgap(ctx));
+        navigation.addView(focusNext, weightLp());
+        focusBox.addView(navigation);
+        focusBox.setVisibility(GONE);
+        addView(focusBox, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    private void enterFocus() {
+        if (current() == null) return;
+        focused = true;
+        mainScroll.setVisibility(GONE);
+        focusBox.setVisibility(VISIBLE);
+        Ui.haptic(getContext(), focusB);
+        applyMotion();
+    }
+
+    public boolean exitFocus() {
+        if (!focused) return false;
+        focused = false;
+        focusBox.setVisibility(GONE);
+        mainScroll.setVisibility(VISIBLE);
+        applyMotion();
+        return true;
+    }
+
+    public boolean isFocused() { return focused; }
+
+    public void saveState(android.os.Bundle out) {
+        out.putBoolean("stageBack", backShown);
+        out.putBoolean("stageFocus", focused);
+    }
+
+    public void restoreState(android.os.Bundle in) {
+        backShown = in.getBoolean("stageBack", false);
+        bind();
+        if (in.getBoolean("stageFocus", false)) enterFocus();
+    }
+
     private void showEmpty(String msg, String cta) {
+        exitFocus();
+        ++loadGen;
+        setArtwork(null, null, ArtworkRenderer.PHOTO_OK);
+        art.setMotionActive(false);
+        focusArt.setMotionActive(false);
+        focusB.setEnabled(false);
+        shuffleB.setEnabled(false);
+        positionTv.setText("");
+        serialTv.setText("LIGHT TABLE");
+        titleTv.setText("等待第一束光");
+        dateTv.setText("");
         emptyBox.removeAllViews();
         emptyBox.setVisibility(VISIBLE);
         emptyBox.addView(Ui.text(getContext(), msg, 14f, Ui.MUTED));

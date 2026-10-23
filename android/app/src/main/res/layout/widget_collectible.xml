@@ -17,15 +17,23 @@
         android:contentDescription="@string/widget_desc" />
 
     <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="L U M O R A    /    C O L L E C T I O N"
+        android:textColor="#AF7449"
+        android:textSize="9sp" />
+
+    <TextView
         android:id="@+id/widget_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:fontFamily="serif"
         android:maxLines="1"
         android:ellipsize="end"
         android:textColor="#183B38"
-        android:textSize="15sp" />
+        android:textSize="18sp" />
 
     <TextView
         android:id="@+id/widget_sub"
@@ -36,4 +44,13 @@
         android:textColor="#7B8477"
         android:textSize="10sp"
         android:text="LUMORA / 今日一藏" />
+
+    <TextView
+        android:id="@+id/widget_next"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:gravity="end|center_vertical"
+        android:textColor="#183B38"
+        android:textSize="12sp"
+        android:contentDescription="浏览下一件藏品" />
 </LinearLayout>

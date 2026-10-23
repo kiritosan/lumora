@@ -32,6 +32,8 @@ public class ArtworkView extends View implements SensorEventListener {
     private boolean windowAttached = false;
     private SensorManager sm;
     private Sensor sensor;
+    private boolean sensorRegistered;
+    private boolean touching;
 
     public ArtworkView(Context context) {
         super(context);
@@ -77,8 +79,7 @@ public class ArtworkView extends View implements SensorEventListener {
 
     private void updateSensor() {
         if (motionActive && interactive && windowAttached && isShown()
-            && Settings.tiltEnabled(getContext())
-            && Ui.animationsEnabled(getContext())) {
+            && Settings.tiltEnabled(getContext()) && Ui.animationsEnabled(getContext())) {
             if (sm == null) {
                 sm = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
             }
@@ -87,12 +88,14 @@ public class ArtworkView extends View implements SensorEventListener {
                 if (sensor == null) sensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
             }
             if (sm != null && sensor != null) {
-                sm.unregisterListener(this); // 幂等
-                sm.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME);
+                if (!sensorRegistered) {
+                    sensorRegistered = sm.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME);
+                }
                 return;
             }
         }
-        if (sm != null) sm.unregisterListener(this);
+        if (sm != null && sensorRegistered) sm.unregisterListener(this);
+        sensorRegistered = false;
     }
 
     @Override
@@ -105,16 +108,29 @@ public class ArtworkView extends View implements SensorEventListener {
     @Override
     protected void onDetachedFromWindow() {
         windowAttached = false;
-        if (sm != null) sm.unregisterListener(this);
+        updateSensor();
         super.onDetachedFromWindow();
     }
 
     @Override
+    protected void onVisibilityChanged(View changedView, int visibility) {
+        super.onVisibilityChanged(changedView, visibility);
+        if (windowAttached) updateSensor();
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (windowAttached) updateSensor();
+    }
+
+    @Override
     public void onSensorChanged(SensorEvent e) {
+        if (touching || !motionActive) return;
         float gx = e.values[0];
         float gz = e.values.length > 2 ? e.values[2] : 0f;
-        float nx = clamp(-gx / 9.8f * MAX_TILT, -MAX_TILT, MAX_TILT);
-        float ny = clamp(-gz / 9.8f * MAX_TILT, -MAX_TILT, MAX_TILT);
+        float nx = sensorTilt(-gx);
+        float ny = sensorTilt(-gz);
         // 抖动过滤：小于阈值不重绘
         if (Math.abs(nx - wantX) < SENSOR_EPS && Math.abs(ny - wantY) < SENSOR_EPS) {
             return;
@@ -122,6 +138,10 @@ public class ArtworkView extends View implements SensorEventListener {
         wantX = nx;
         wantY = ny;
         invalidate();
+    }
+
+    static float sensorTilt(float gravity) {
+        return clamp(gravity / 9.8f * MAX_TILT * 1.6f, -MAX_TILT, MAX_TILT);
     }
 
     @Override
@@ -139,6 +159,7 @@ public class ArtworkView extends View implements SensorEventListener {
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 Ui.haptic(getContext(), this);
+                touching = true;
                 // fallthrough
             case MotionEvent.ACTION_MOVE:
                 float nx = getWidth() > 0 ? (ev.getX() / getWidth() - 0.5f) * 2f : 0f;
@@ -148,14 +169,12 @@ public class ArtworkView extends View implements SensorEventListener {
                 invalidate();
                 return true;
             case MotionEvent.ACTION_UP:
-                wantX = 0f;
-                wantY = 0f;
+                touching = false;
                 invalidate();
                 performClick();
                 return true;
             case MotionEvent.ACTION_CANCEL:
-                wantX = 0f;
-                wantY = 0f;
+                touching = false;
                 invalidate();
                 return true;
             default:

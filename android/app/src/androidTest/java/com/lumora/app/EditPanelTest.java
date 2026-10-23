@@ -84,4 +84,17 @@ public final class EditPanelTest extends InstrumentationTestCase {
         assertEquals(0, host.saves.get());
         assertTrue(panel.isFrozen());
     }
+
+    public void testInspirationDoesNotChangeDraftAndDirtyStateTracksEdits() throws Throwable {
+        Item original = Item.newProcedural("原题", "原手记", Item.MATERIAL_SEA, 0);
+        onMain(() -> {
+            panel.openEdit(original, null);
+            assertFalse(panel.hasChanges());
+            panel.findViewById(R.id.edit_prompt).performClick();
+            assertFalse(panel.hasChanges());
+            panel.applyDraft("新题", "原手记", Item.MATERIAL_SEA);
+            assertTrue(panel.hasChanges());
+        });
+        assertEquals("原题", original.title);
+    }
 }

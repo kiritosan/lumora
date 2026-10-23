@@ -3,4 +3,8 @@
     <string name="app_name">Lumora</string>
     <string name="widget_name">拾光 · 今日一藏</string>
     <string name="widget_desc">你最近心动的藏品，安静地躺在桌面。</string>
+    <string name="widget_compact_name">拾光 · 一瞬</string>
+    <string name="widget_wide_name">拾光 · 光景</string>
+    <string name="widget_compact_desc">一格光景，轻触进入藏品，下一件可在桌面切换。</string>
+    <string name="widget_wide_desc">横向光桌，在桌面浏览藏品与展签。</string>
 </resources>
