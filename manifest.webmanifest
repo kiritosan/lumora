@@ -1,6 +1,6 @@
 {
-  "name": "拾光 · 我的收藏集",
-  "short_name": "拾光",
+  "name": "Lumora · 我的收藏集",
+  "short_name": "Lumora",
   "description": "把喜欢的图片藏成独一份的收藏级卡片",
   "start_url": "./index.html",
   "scope": "./",

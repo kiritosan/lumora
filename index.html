@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#101116">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="拾光">
+  <meta name="apple-mobile-web-app-title" content="Lumora">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>拾光 · 我的收藏集</title>
+  <title>Lumora · 我的收藏集</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root { color-scheme: dark; --bg: #101116; --panel: #191b23; --line: #ffffff10; --text: #eeedf4; --muted: #878995; --pink: #f4a8c3; --mint: #a4e5da; }
@@ -265,7 +265,7 @@
     <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M6.5 19a4.5 4.5 0 0 1-.4-8.98 6 6 0 0 1 11.7-1.4A4.7 4.7 0 0 1 17.5 19Z"/><path d="M12 12v6m0-6-2.2 2.2M12 12l2.2 2.2"/></symbol>
   </defs></svg>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark"><svg class="icon"><use href="#i-spark"/></svg></span><strong>拾光</strong><small>COLLECTION</small></div>
+    <div class="brand"><span class="brand-mark"><svg class="icon"><use href="#i-spark"/></svg></span><strong>Lumora</strong><small>COLLECTION</small></div>
     <nav class="nav" aria-label="主导航"><button class="active" id="navCollection">我的收藏集</button><button id="navWorkshop">创作工坊</button></nav>
     <div class="top-actions"><span class="local-status" id="saveStatus" role="status">正在读取收藏…</span><span class="avatar" aria-label="本地个人空间">我</span></div>
   </header>
@@ -446,7 +446,7 @@
         const card = document.createElement('div');
         card.className = 'collectible';
         card.dataset.itemId = item.id;
-        card.innerHTML = '<div class="card-front"><div class="art-window"><img draggable="false"><div class="finish"></div><div class="grain"></div><div class="glare"></div><div class="gallery-light"></div></div><div class="card-decoration"></div><div class="card-top"><span>SHIGUANG COLLECTION</span><b>SR</b></div><div class="card-caption"><small>THE MOMENTS WE KEEP</small><h3></h3><p>PERSONAL EDITION</p></div></div><div class="card-back" aria-hidden="true"><span class="back-label">SHIGUANG · PRIVATE ARCHIVE</span><div class="back-seal">拾<span>光</span></div><strong class="back-title"></strong><span class="back-detail"></span><span class="back-foot">每一份热爱，都有回响<br>CURATED BY YOU · KEPT FOREVER</span></div>';
+        card.innerHTML = '<div class="card-front"><div class="art-window"><img draggable="false"><div class="finish"></div><div class="grain"></div><div class="glare"></div><div class="gallery-light"></div></div><div class="card-decoration"></div><div class="card-top"><span>LUMORA COLLECTION</span><b>SR</b></div><div class="card-caption"><small>THE MOMENTS WE KEEP</small><h3></h3><p>PERSONAL EDITION</p></div></div><div class="card-back" aria-hidden="true"><span class="back-label">LUMORA · PRIVATE ARCHIVE</span><div class="back-seal">L<span>M</span></div><strong class="back-title"></strong><span class="back-detail"></span><span class="back-foot">每一份热爱，都有回响<br>CURATED BY YOU · KEPT FOREVER</span></div>';
         const img = card.querySelector('img');
         img.alt = thumbnail ? '' : item.title;
         img.loading = thumbnail ? 'lazy' : 'eager';
@@ -767,7 +767,7 @@
             shapePath(ctx, 12 * S, 12 * S, W - 24 * S, H - 24 * S, (shape === 'arch' ? 9 : 5) * S, shape); ctx.stroke();
             if (shape !== 'arch') {
               ctx.shadowColor = '#000'; ctx.shadowBlur = 4 * S;
-              drawText(ctx, 'SHIGUANG COLLECTION', 25 * S, 29 * S, `${8 * S}px sans-serif`, '#ffffffe0', 2 * S);
+              drawText(ctx, 'LUMORA COLLECTION', 25 * S, 29 * S, `${8 * S}px sans-serif`, '#ffffffe0', 2 * S);
               const bw = drawText(ctx, 'SR', W - 30 * S, 29 * S, `${9 * S}px sans-serif`, '#ffffffe0', S, 'right');
               ctx.strokeStyle = '#ffffff66'; ctx.strokeRect(W - 30 * S - bw - 5 * S, 19 * S, bw + 10 * S, 14 * S);
             }
@@ -785,7 +785,7 @@
           exportBlob = await renderCardPng(item);
           if (exportUrl) URL.revokeObjectURL(exportUrl);
           exportUrl = URL.createObjectURL(exportBlob);
-          const name = `${(item.title || '拾光藏品').replace(/[\\/:*?"<>|]/g, '_')}.png`;
+          const name = `${(item.title || 'Lumora藏品').replace(/[\\/:*?"<>|]/g, '_')}.png`;
           $('exportPreview').src = exportUrl;
           $('downloadExport').href = exportUrl; $('downloadExport').download = name;
           $('shareExport').hidden = !(navigator.canShare && navigator.canShare({ files: [new File([exportBlob], name, { type: 'image/png' })] }));
@@ -796,7 +796,7 @@
       $('shareExport').addEventListener('click', async () => {
         if (!exportBlob) return;
         const file = new File([exportBlob], $('downloadExport').download, { type: 'image/png' });
-        try { await navigator.share({ files: [file], title: current()?.title || '拾光藏品' }); } catch (error) {}
+        try { await navigator.share({ files: [file], title: current()?.title || 'Lumora藏品' }); } catch (error) {}
       });
       // ---- 背景音乐 ----
       const audio = new Audio();
@@ -1320,7 +1320,7 @@
         const url = URL.createObjectURL(new Blob([JSON.stringify(payload)], { type: 'application/json' }));
         const link = document.createElement('a');
         link.href = url;
-        link.download = `拾光收藏-${new Date().toISOString().slice(0, 10)}.json`;
+        link.download = `lumora-collection-${new Date().toISOString().slice(0, 10)}.json`;
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 5000);
         showHint('已导出收藏集备份，包含全部图片与设置');

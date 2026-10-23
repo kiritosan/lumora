@@ -1,4 +1,4 @@
-const CACHE = 'shiguang-v8';
+const CACHE = 'lumora-v9';
 const ASSETS = ['./', './index.html', './museum.css', './physics.css', './physics-feedback.js', './physics.js', './cloud.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {

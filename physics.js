@@ -31,7 +31,7 @@
     const content = node('div', 'physics-content');
     const header = node('div', 'physics-header');
     const heading = node('div');
-    heading.append(node('p', 'physics-eyebrow', 'SHIGUANG / INTERACTIVE STUDY'));
+    heading.append(node('p', 'physics-eyebrow', 'LUMORA / INTERACTIVE STUDY'));
     const title = node('h2', '', '掌心之间 · 物理把玩');
     title.id = 'physicsTitle';
     heading.append(title);
