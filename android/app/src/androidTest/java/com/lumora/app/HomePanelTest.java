@@ -76,4 +76,23 @@ public final class HomePanelTest extends InstrumentationTestCase {
         assertNotNull(add);
         assertFalse(add.isEnabled());
     }
+
+    public void testNewDisplayModesRestoreWithoutChangingItems() throws Throwable {
+        List<Item> items = samples(2);
+        items.get(0).note = "那天的光落在窗边。";
+        android.os.Bundle state = new android.os.Bundle();
+        onMain(() -> {
+            panel.setItems(items);
+            panel.findViewById(R.id.view_notes).performClick();
+            panel.saveState(state);
+        });
+        assertEquals(3, state.getInt("homeLens"));
+        onMain(() -> {
+            panel.findViewById(R.id.view_gallery).performClick();
+            panel.restoreState(state);
+        });
+        assertTrue(panel.findViewById(R.id.view_notes).isSelected());
+        assertEquals("那天的光落在窗边。", items.get(0).note);
+        assertFalse(items.get(0).favorite);
+    }
 }
