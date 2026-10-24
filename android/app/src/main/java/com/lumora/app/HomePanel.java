@@ -78,6 +78,9 @@ public final class HomePanel extends ScrollView {
     private Item featured;
     private int sort = CollectionInsights.NEWEST;
     private boolean timeline = false;
+    private int lens = 0; // 0 gallery, 1 timeline, 2 image palette, 3 notes
+    private TextView paletteControl, notesControl;
+    private final Map<String, CollectionPalette> palettes = new HashMap<>();
     private TextView resultCount, sortControl, galleryControl, timelineControl, summary;
     private TextView featuredNote;
 
@@ -225,16 +228,28 @@ public final class HomePanel extends ScrollView {
         collectionHeading.addView(resultCount);
         content.addView(collectionHeading);
         content.addView(Ui.spacer(ctx, 10));
+        HorizontalScrollView lensScroll = new HorizontalScrollView(ctx);
+        lensScroll.setHorizontalScrollBarEnabled(false);
         LinearLayout controls = Ui.hbox(ctx);
         galleryControl = Ui.chip(ctx, "画廊", true);
         galleryControl.setId(R.id.view_gallery);
         timelineControl = Ui.chip(ctx, "时间档案", false);
         timelineControl.setId(R.id.view_timeline);
-        galleryControl.setOnClickListener(v -> setTimeline(false));
-        timelineControl.setOnClickListener(v -> setTimeline(true));
-        controls.addView(galleryControl, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.8f));
+        galleryControl.setOnClickListener(v -> setLens(0));
+        timelineControl.setOnClickListener(v -> setLens(1));
+        controls.addView(galleryControl);
         controls.addView(gap(ctx));
-        controls.addView(timelineControl, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.1f));
+        controls.addView(timelineControl);
+        controls.addView(gap(ctx));
+        paletteControl = Ui.chip(ctx, "收藏色谱", false);
+        paletteControl.setId(R.id.view_palette);
+        paletteControl.setOnClickListener(v -> setLens(2));
+        controls.addView(paletteControl);
+        controls.addView(gap(ctx));
+        notesControl = Ui.chip(ctx, "手记展览", false);
+        notesControl.setId(R.id.view_notes);
+        notesControl.setOnClickListener(v -> setLens(3));
+        controls.addView(notesControl);
         controls.addView(gap(ctx));
         sortControl = Ui.chip(ctx, "最近入藏 ▾", false);
         sortControl.setId(R.id.collection_sort);
@@ -247,8 +262,9 @@ public final class HomePanel extends ScrollView {
                     dialog.dismiss();
                     render();
                 }).setNegativeButton("取消", null).show());
-        controls.addView(sortControl, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f));
-        content.addView(controls);
+        controls.addView(sortControl);
+        lensScroll.addView(controls);
+        content.addView(lensScroll);
         content.addView(Ui.spacer(ctx, 8));
         content.addView(Ui.text(ctx, "轻触赏光 · 长按藏品可心动、编辑或分享", 11, Ui.MUTED));
         content.addView(Ui.spacer(ctx, 12));
@@ -275,6 +291,7 @@ public final class HomePanel extends ScrollView {
     }
 
     public void setItems(List<Item> items) {
+        palettes.clear(); // A backup restore may replace photo bytes while keeping ids/names.
         all.clear();
         all.addAll(items);
         loading = false;
@@ -291,6 +308,7 @@ public final class HomePanel extends ScrollView {
     public void saveState(Bundle out) {
         out.putInt("homeSort", sort);
         out.putBoolean("homeTimeline", timeline);
+        out.putInt("homeLens", lens);
         out.putString("homeQuery", query);
         out.putBoolean("homeFav", onlyFav);
         out.putBoolean("homeOwn", onlyOwn);
@@ -300,7 +318,8 @@ public final class HomePanel extends ScrollView {
 
     public void restoreState(Bundle in) {
         sort = Math.max(0, Math.min(3, in.getInt("homeSort", 0)));
-        timeline = in.getBoolean("homeTimeline", false);
+        lens = Math.max(0, Math.min(3, in.getInt("homeLens", in.getBoolean("homeTimeline", false) ? 1 : 0)));
+        timeline = lens == 1;
         if (timeline && sort > CollectionInsights.OLDEST) sort = CollectionInsights.NEWEST;
         query = in.getString("homeQuery", "");
         onlyFav = in.getBoolean("homeFav", false);
@@ -320,10 +339,11 @@ public final class HomePanel extends ScrollView {
         return CollectionInsights.select(source, query, onlyFav, material, sort);
     }
 
-    private void setTimeline(boolean enabled) {
-        timeline = enabled;
+    private void setLens(int selected) {
+        lens = selected;
+        timeline = lens == 1;
         if (timeline && sort > CollectionInsights.OLDEST) sort = CollectionInsights.NEWEST;
-        Ui.haptic(getContext(), enabled ? timelineControl : galleryControl);
+        Ui.haptic(getContext(), galleryControl);
         render();
     }
 
@@ -361,7 +381,9 @@ public final class HomePanel extends ScrollView {
         final int gen = ++bindGen;
         Context ctx = getContext();
         addB.setEnabled(!loading && storeError == null);
-        Ui.restyleChip(ctx, galleryControl, !timeline);
+        Ui.restyleChip(ctx, galleryControl, lens == 0);
+        Ui.restyleChip(ctx, paletteControl, lens == 2);
+        Ui.restyleChip(ctx, notesControl, lens == 3);
         Ui.restyleChip(ctx, timelineControl, timeline);
         sortControl.setText(CollectionInsights.SORT_NAMES[sort] + " ▾");
         resultCount.setText(loading ? "整理中" : (storeError != null ? "暂不可用" : ""));
@@ -391,7 +413,7 @@ public final class HomePanel extends ScrollView {
             : "已珍藏 " + personal + " 个片刻 · 在 " + CollectionInsights.activeDays(all) + " 个日子里发现光");
 
         // A daily reunion, independent of sort and hidden while narrowing results.
-        if (items.isEmpty() || searching || timeline) {
+        if (items.isEmpty() || searching || lens != 0) {
             featured = null;
             featuredCard.setVisibility(GONE);
         } else {
@@ -430,6 +452,22 @@ public final class HomePanel extends ScrollView {
             stateTv.setVisibility(GONE);
         }
 
+        if (lens == 2) {
+            renderPalette(items, gen);
+            return;
+        }
+        if (lens == 3) {
+            int count = 0;
+            for (Item it : items) {
+                if (it.note == null || it.note.trim().isEmpty()) continue;
+                grid.addView(makeNoteCard(ctx, it, gen));
+                count++;
+            }
+            resultCount.setText(count + " 份手记");
+            stateTv.setVisibility(count == 0 ? VISIBLE : GONE);
+            stateTv.setText("还没有写下的手记。打开一件藏品，留下一句当时的心情。");
+            return;
+        }
         if (timeline) {
             String previousMonth = "";
             for (Item it : items) {
@@ -464,6 +502,108 @@ public final class HomePanel extends ScrollView {
                 }
             }
         }
+    }
+
+    private View makeNoteCard(Context ctx, Item item, int gen) {
+        LinearLayout card = Ui.vbox(ctx);
+        card.setPadding(Ui.dp(ctx, 20), Ui.dp(ctx, 20), Ui.dp(ctx, 20), Ui.dp(ctx, 20));
+        card.setBackground(Ui.glass(ctx, 22));
+        card.addView(Ui.eyebrow(ctx, "FIELD NOTE / " + Ui.dateCompact(item.created)));
+        card.addView(Ui.spacer(ctx, 12));
+        TextView quote = Ui.serif(ctx, "“" + item.note.trim() + "”", 20, Ui.INK);
+        quote.setMaxLines(5);
+        quote.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        quote.setLineSpacing(Ui.dp(ctx, 5), 1);
+        card.addView(quote);
+        card.addView(Ui.spacer(ctx, 16));
+        LinearLayout signature = Ui.hbox(ctx);
+        signature.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        ArtworkView thumbnail = new ArtworkView(ctx);
+        thumbnail.setInteractive(false);
+        thumbnail.setBackground(Ui.rounded(ctx, Ui.PAPER, 8, null, 0));
+        thumbnail.setClipToOutline(true);
+        thumbnail.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        signature.addView(thumbnail, new LinearLayout.LayoutParams(Ui.dp(ctx, 48), Ui.dp(ctx, 56)));
+        bindThumb(thumbnail, item, gen);
+        LinearLayout label = Ui.vbox(ctx);
+        label.setPadding(Ui.dp(ctx, 12), 0, 0, 0);
+        TextView title = Ui.serifBold(ctx, item.title, 16, Ui.INK);
+        title.setMaxLines(2);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        label.addView(title);
+        label.addView(Ui.eyebrow(ctx, item.serial() + " · " + Ui.materialName(item.material)));
+        signature.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
+        card.addView(signature);
+        card.setOnClickListener(v -> host.onOpen(item));
+        card.setOnLongClickListener(v -> { showActions(item); return true; });
+        Ui.touchSurface(ctx, card, 22);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.bottomMargin = Ui.dp(ctx, 16);
+        card.setLayoutParams(lp);
+        return card;
+    }
+
+    /** Analyse tiny images once on the shared IO thread; stale projections cannot redraw. */
+    private void renderPalette(List<Item> items, int gen) {
+        stateTv.setVisibility(GONE);
+        grid.addView(Ui.text(getContext(), "从画面里拾取颜色，沿着色彩重新遇见收藏。", 13, Ui.MUTED));
+        LinearLayout study = Ui.vbox(getContext());
+        grid.addView(study);
+        study.addView(Ui.text(getContext(), "正在拾色…", 13, Ui.MUTED));
+        // Prune references when items have been removed or their presentation changed.
+        java.util.Set<String> active = new java.util.HashSet<>();
+        for (Item item : all) active.add(CollectionPalette.key(item));
+        palettes.keySet().retainAll(active);
+        Map<String, CollectionPalette> cached = new HashMap<>(palettes);
+        io.execute(() -> {
+            Map<String, CollectionPalette> result = new HashMap<>();
+            for (Item item : items) {
+                String key = CollectionPalette.key(item);
+                CollectionPalette palette = cached.get(key);
+                if (palette == null) {
+                    Bitmap image = item.isPhoto() ? repo.loadPhoto(item.photoName, 96)
+                        : ArtworkRenderer.renderArtBitmap(96, 96, item, null, ArtworkRenderer.PHOTO_OK);
+                    palette = CollectionPalette.from(image);
+                    // Photo bitmaps may be owned by the repository cache.
+                    if (!item.isPhoto() && image != null) image.recycle();
+                }
+                if (palette != null) result.put(key, palette);
+            }
+            post(() -> {
+                if (gen != bindGen || lens != 2) return;
+                palettes.putAll(result);
+                study.removeAllViews();
+                for (int family = 0; family <= CollectionPalette.NAMES.length; family++) {
+                    boolean heading = false;
+                    for (Item item : items) {
+                        CollectionPalette palette = result.get(CollectionPalette.key(item));
+                        int group = palette == null ? CollectionPalette.NAMES.length : palette.family;
+                        if (group != family) continue;
+                        if (!heading) {
+                            TextView label = Ui.serifBold(getContext(), family < CollectionPalette.NAMES.length
+                                ? CollectionPalette.NAMES[family] : "照片暂不可用", 22, Ui.INK);
+                            label.setPadding(0, Ui.dp(getContext(), 24), 0, Ui.dp(getContext(), 12));
+                            study.addView(label);
+                            heading = true;
+                        }
+                        LinearLayout entry = Ui.vbox(getContext());
+                        entry.addView(makeTimelineCard(getContext(), item, gen));
+                        if (palette != null) {
+                            LinearLayout strip = Ui.hbox(getContext());
+                            for (int color : palette.colors) {
+                                View swatch = new View(getContext());
+                                swatch.setBackgroundColor(color);
+                                strip.addView(swatch, new LinearLayout.LayoutParams(0, Ui.dp(getContext(), 9), 1));
+                            }
+                            strip.setContentDescription("画面色样 " + CollectionPalette.NAMES[palette.family]);
+                            entry.addView(strip);
+                        }
+                        entry.addView(Ui.spacer(getContext(), 14));
+                        study.addView(entry);
+                    }
+                }
+            });
+        });
     }
 
     private LinearLayout.LayoutParams cellLp(Context ctx) {
