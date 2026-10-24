@@ -33,6 +33,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".WidgetConfigureActivity"
+            android:exported="true"
+            android:label="@string/widget_configure_desc">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- 非导出、按需授权的文件出口：相册拍照回写 / 分享 PNG。
              只允许精确的文件名段，拒绝任意路径。 -->
         <provider
