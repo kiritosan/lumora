@@ -24,9 +24,10 @@ def main():
     cnb = os.path.join(root, ".cnb.yml")
     sec = os.path.join(root, "android", "ci", "lumora-secrets.example.yml")
     sh = os.path.join(root, "android", "ci", "build.sh")
+    signing = os.path.join(root, "android", "ci", "prepare-signing.sh")
     ga = os.path.join(root, ".gitattributes")
 
-    for p in (cnb, sec, sh, ga):
+    for p in (cnb, sec, sh, signing, ga):
         check("exists %s" % os.path.relpath(p, root), os.path.isfile(p))
 
     # ---- .cnb.yml 结构 ----
@@ -39,8 +40,9 @@ def main():
     check("docker image sdk34", "image: mobiledevops/android-sdk-image:34.0.1" in y)
     check("gradle volumes", "/root/.gradle:copy-on-write" in y
           and "/root/gradle-dist:copy-on-write" in y)
-    check("imports commented inside anchor",
-          "# imports: https://cnb.cool/<your-secret-repo>" in y)
+    check("private signing imports inside anchor",
+          re.search(r"^  imports: https://cnb\.cool/sizuku-2025/lumora-secrets/-/blob/main/lumora-debug-secrets\.yml$",
+                    y, re.M) is not None)
     check("stages block", re.search(r"^\s{2}stages:", y, re.M) is not None)
     i_build = y.find("- name: Build Native Android")
     i_upload = y.find("- name: Upload APK And Reports")
@@ -93,13 +95,18 @@ def main():
     except OSError:
         b = ""
     check("set -euo pipefail", "set -euo pipefail" in b)
-    check("sign var list", "LUMORA_KEYSTORE_B64" in b
-          and "LUMORA_STORE_PASSWORD" in b and "LUMORA_KEY_ALIAS" in b
-          and "LUMORA_KEY_PASSWORD" in b)
-    check("any-set detection", 'any_set' in b)
-    check("partial config fails", "不允许部分配置" in b)
-    i_trap = b.find("trap 'rm -f \"$KEYSTORE_FILE\"' EXIT")
-    i_decode = b.find("base64 -d")
+    check("signing helper sourced", "source android/ci/prepare-signing.sh" in b)
+    with open(signing, encoding="utf-8") as stream:
+        signing_source = stream.read()
+    check("sign var list", "LUMORA_KEYSTORE_B64" in signing_source
+          and "LUMORA_STORE_PASSWORD" in signing_source and "LUMORA_KEY_ALIAS" in signing_source
+          and "LUMORA_KEY_PASSWORD" in signing_source)
+    check("any-set detection", 'any_set' in signing_source)
+    check("partial config fails", "不允许降级为 debug 包" in signing_source)
+    check("fixed debug key required", "LUMORA_DEBUG_KEYSTORE_B64" in signing_source
+          and "不再生成随机签名" in signing_source)
+    i_trap = signing_source.find("trap 'rm -f \"$KEYSTORE_FILE\"' EXIT")
+    i_decode = signing_source.find("base64 -d")
     check("trap before decode", -1 < i_trap < i_decode)
     check("artifacts preclean", "rm -f android/artifacts/lumora-debug.apk" in b)
     check("gradle sha256 verify", "sha256sum" in b and "expect" in b)
@@ -121,6 +128,8 @@ def main():
     check("useLibrary test mock", "useLibrary 'android.test.mock'" in a)
     check("lint abortOnError true", "abortOnError true" in a)
     check("debug suffix", "applicationIdSuffix" in a)
+    check("fixed preview signing", "LUMORA_DEBUG_KEYSTORE_B64" in a
+          and "signingConfig signingConfigs.preview" in a and "keystore/cnb-debug.p12" in a)
     check("AGP 8.3.2 classpath",
           "com.android.tools.build:gradle:8.3.2" in open(
               os.path.join(root, "android", "build.gradle"), encoding="utf-8").read())

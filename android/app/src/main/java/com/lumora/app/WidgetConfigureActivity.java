@@ -6,6 +6,8 @@ import android.appwidget.AppWidgetProviderInfo;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.ViewGroup;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -20,8 +22,8 @@ import java.util.List;
 public final class WidgetConfigureActivity extends Activity {
     private int widgetId;
     private AppState app;
-    private Spinner source, style, selection;
-    private CheckBox daily;
+    private Spinner source, style, selection, theme;
+    private CheckBox daily, personal, photos, notes, fullImage;
     private Button save;
     private TextView status;
     private List<Item> items = new ArrayList<>();
@@ -52,6 +54,14 @@ public final class WidgetConfigureActivity extends Activity {
         source.setSelection(config.source);
         style = spinner(page, "展陈方式", WidgetExhibit.STYLES);
         style.setSelection(config.style);
+        theme = spinner(page, "展厅外观", WidgetExhibit.THEMES);
+        theme.setSelection(config.theme);
+        personal = check(page, "只展出我的收藏 · 隐藏示例", config.personalOnly);
+        photos = check(page, "只展出照片藏品", config.photosOnly);
+        notes = check(page, "只展出写有手记的藏品", config.notesOnly);
+        fullImage = check(page, "照片完整构图 · 保留边缘与原色", config.fullImage);
+        page.addView(Ui.text(this, "完整构图以展厅底色留边，不裁切、不加釉光；三联中的每张照片也保留全貌。关闭后使用材质光景。", 13, Ui.MUTED));
+        page.addView(Ui.spacer(this, 14));
         selection = spinner(page, "固定一件（优先于每日轮换，需符合展览范围）", new String[]{"不固定，随展览轮换"});
         daily = new CheckBox(this);
         daily.setText("每日重逢 · 每天换一件精选");
@@ -68,9 +78,7 @@ public final class WidgetConfigureActivity extends Activity {
         save.setId(R.id.widget_save);
         save.setEnabled(false);
         save.setOnClickListener(v -> {
-            config.source = source.getSelectedItemPosition();
-            config.style = style.getSelectedItemPosition();
-            config.daily = daily.isChecked();
+            readChoices();
             int index = selection.getSelectedItemPosition() - 1;
             config.pinned = index >= 0 && index < items.size() ? items.get(index).id : null;
             if (config.pinned != null) {
@@ -97,10 +105,53 @@ public final class WidgetConfigureActivity extends Activity {
         if (state != null) {
             source.setSelection(state.getInt("source", config.source));
             style.setSelection(state.getInt("style", config.style));
+            theme.setSelection(state.getInt("theme", config.theme));
             daily.setChecked(state.getBoolean("daily", config.daily));
+            personal.setChecked(state.getBoolean("personal", config.personalOnly));
+            photos.setChecked(state.getBoolean("photos", config.photosOnly));
+            notes.setChecked(state.getBoolean("notes", config.notesOnly));
+            fullImage.setChecked(state.getBoolean("full", config.fullImage));
             config.pinned = state.getString("pin", config.pinned);
         }
+        AdapterView.OnItemSelectedListener changes = new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) { updateSummary(); }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
+        };
+        for (Spinner spinner : new Spinner[]{source, style, theme, selection}) spinner.setOnItemSelectedListener(changes);
+        for (CheckBox check : new CheckBox[]{daily, personal, photos, notes, fullImage}) {
+            check.setOnCheckedChangeListener((button, checked) -> updateSummary());
+        }
         app.ensureLoaded();
+    }
+
+    private CheckBox check(LinearLayout page, String label, boolean checked) {
+        CheckBox box = new CheckBox(this);
+        box.setText(label);
+        box.setTextColor(Ui.INK);
+        box.setMinimumHeight(Ui.dp(this, 48));
+        box.setChecked(checked);
+        page.addView(box);
+        return box;
+    }
+
+    private void readChoices() {
+        config.source = source.getSelectedItemPosition();
+        config.style = style.getSelectedItemPosition();
+        config.theme = theme.getSelectedItemPosition();
+        config.daily = daily.isChecked();
+        config.personalOnly = personal.isChecked();
+        config.photosOnly = photos.isChecked();
+        config.notesOnly = notes.isChecked();
+        config.fullImage = fullImage.isChecked();
+    }
+
+    private void updateSummary() {
+        if (!choicesLoaded) return;
+        readChoices();
+        int count = config.candidates(items).size();
+        status.setText("当前匹配 " + count + " 件 · " + WidgetExhibit.THEMES[config.theme]
+            + (count == 0 ? "\n桌面会显示等待展览；新增符合范围的藏品后自动更新。" : "\n点卡片赏光，点“布展”调整；大卡片可浏览上一件。")
+            + "\n筛选有手记不等于展示手记；只有“一页手记”样式会显示正文。");
     }
 
     private Spinner spinner(LinearLayout page, String label, String[] choices) {
@@ -122,22 +173,23 @@ public final class WidgetConfigureActivity extends Activity {
             save.setEnabled(false);
             return;
         }
-        if (!choicesLoaded) {
-            items = app.store().all();
-            List<String> titles = new ArrayList<>();
-            titles.add("不固定，随展览轮换");
-            int selected = 0;
-            for (Item item : items) {
-                titles.add(item.title + " · " + item.serial());
-                if (item.id.equals(config.pinned)) selected = titles.size() - 1;
-            }
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, titles);
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            selection.setAdapter(adapter);
-            selection.setSelection(selected);
-            choicesLoaded = true;
+        int oldIndex = selection.getSelectedItemPosition() - 1;
+        String selectedId = choicesLoaded
+            ? (oldIndex >= 0 && oldIndex < items.size() ? items.get(oldIndex).id : null) : config.pinned;
+        items = app.store().all();
+        List<String> titles = new ArrayList<>();
+        titles.add("不固定，随展览轮换");
+        int selected = 0;
+        for (Item item : items) {
+            titles.add(item.title + " · " + item.serial());
+            if (item.id.equals(selectedId)) selected = titles.size() - 1;
         }
-        status.setText("每个小部件独立设置；点桌面卡片赏光，点“布展”随时调整。\n桌面可被旁人看到，请按需要选择是否展示手记。");
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, titles);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        selection.setAdapter(adapter);
+        selection.setSelection(selected);
+        choicesLoaded = true;
+        updateSummary();
         save.setEnabled(true);
     }
 
@@ -154,7 +206,12 @@ public final class WidgetConfigureActivity extends Activity {
         if (config == null) return;
         out.putInt("source", source.getSelectedItemPosition());
         out.putInt("style", style.getSelectedItemPosition());
+        out.putInt("theme", theme.getSelectedItemPosition());
         out.putBoolean("daily", daily.isChecked());
+        out.putBoolean("personal", personal.isChecked());
+        out.putBoolean("photos", photos.isChecked());
+        out.putBoolean("notes", notes.isChecked());
+        out.putBoolean("full", fullImage.isChecked());
         int i = selection.getSelectedItemPosition() - 1;
         out.putString("pin", choicesLoaded ? (i >= 0 && i < items.size() ? items.get(i).id : null) : config.pinned);
     }

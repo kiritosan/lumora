@@ -61,48 +61,11 @@ rm -f android/artifacts/lumora-debug.apk \
       android/artifacts/lumora-release.apk \
       android/artifacts/lint-results-debug.html \
       android/artifacts/lint-results-release.html \
+      android/artifacts/signing-certificate.txt \
       android/artifacts/SHA256SUMS.txt
 
-sign_vars=(LUMORA_KEYSTORE_B64 LUMORA_STORE_PASSWORD LUMORA_KEY_ALIAS LUMORA_KEY_PASSWORD)
-any_set=0
-for v in "${sign_vars[@]}"; do
-  if [ -n "${!v:-}" ]; then any_set=1; fi
-done
-
-if [ "$any_set" -eq 1 ]; then
-  echo "== Release 签名模式 =="
-  for v in "${sign_vars[@]}"; do
-    if [ -z "${!v:-}" ]; then
-      echo "签名变量 $v 缺失：四者必须同时配置（见 android/ci/lumora-secrets.example.yml），" >&2
-      echo "不允许部分配置静默降级为 debug 包。" >&2
-      exit 1
-    fi
-  done
-  umask 077
-  mkdir -p android/keystore
-  KEYSTORE_FILE="android/keystore/cnb-release.p12"
-  # trap 先于解码建立：解码失败/中途退出也不留半成品密钥
-  trap 'rm -f "$KEYSTORE_FILE"' EXIT
-  echo "$LUMORA_KEYSTORE_B64" | base64 -d > "$KEYSTORE_FILE"
-  if [ ! -s "$KEYSTORE_FILE" ]; then
-    echo "密钥库解码为空" >&2
-    exit 1
-  fi
-  tasks=(assembleRelease lintRelease assembleDebugAndroidTest)
-  variant="release"
-  apk_src="android/app/build/outputs/apk/release/app-release.apk"
-  apk_dst="android/artifacts/lumora-release.apk"
-  lint_src="android/app/build/reports/lint-results-release.html"
-else
-  echo "== Debug 构建模式 =="
-  echo "未配置 LUMORA_* 签名变量：产出 debug 包。"
-  echo "注意：debug 预览密钥随构建机器可变，不作为可升级的生产签名。"
-  tasks=(assembleDebug lintDebug assembleDebugAndroidTest)
-  variant="debug"
-  apk_src="android/app/build/outputs/apk/debug/app-debug.apk"
-  apk_dst="android/artifacts/lumora-debug.apk"
-  lint_src="android/app/build/reports/lint-results-debug.html"
-fi
+# 固定签名配置；缺少预览密钥时拒绝产出无法覆盖更新的随机签名包。
+source android/ci/prepare-signing.sh
 
 echo "== Gradle: ${tasks[*]} =="
 "$GRADLE" -p android --no-daemon --console=plain "${tasks[@]}"
@@ -121,7 +84,8 @@ if [ ! -f "$apk_dst" ]; then
 fi
 
 echo "== 校验 APK 签名 =="
-"$APKSIGNER" verify --verbose --print-certs "$apk_dst" | sed 's/\(.\{160\}\).*/\1/'
+"$APKSIGNER" verify --verbose --print-certs "$apk_dst" > android/artifacts/signing-certificate.txt
+sed 's/\(.\{160\}\).*/\1/' android/artifacts/signing-certificate.txt
 
 echo "== 生成校验和 =="
 ( cd android/artifacts && sha256sum "$(basename "$apk_dst")" > SHA256SUMS.txt )

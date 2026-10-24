@@ -1,8 +1,10 @@
 # Lumora · 拾光 —— Tencent CNB 构建流水线
 # 推送 main 或 master 触发：编译 + lint + 测试编译，APK 与 lint 报告经附件发布。
 #
-# 发布签名（可选）：在本组织下建一个 CNB 机密仓库，按 android/ci/lumora-secrets.example.yml
-# 模板填入四个 LUMORA_* 变量，然后把下方 anchor 内的 imports 注释解开、URL 换成该文件
+# 固定预览签名（必需）：运行 android/ci/prepare-debug-signing.ps1 准备私密文件，
+# 已通过下方 imports 接入机密仓库。没有固定预览签名且没有正式签名时构建失败。
+# 正式签名：在本组织下建一个 CNB 机密仓库，按 android/ci/lumora-secrets.example.yml
+# 模板填入四个 LUMORA_* 变量，然后把下方 anchor 内的 imports URL 换成该文件
 # 的 blob 地址（注释位置就在流水线定义里，不要挪到别处）。
 
 .android: &android
@@ -11,7 +13,7 @@
     volumes:
       - /root/.gradle:copy-on-write
       - /root/gradle-dist:copy-on-write
-  # imports: https://cnb.cool/<your-secret-repo>/-/blob/main/lumora-app.yml
+  imports: https://cnb.cool/sizuku-2025/lumora-secrets/-/blob/main/lumora-debug-secrets.yml
   stages:
     - name: Build Native Android
       script: bash android/ci/build.sh
@@ -30,6 +32,7 @@ master:
     - <<: *android
 
 # Isolated preview build for the collection palette and configurable desktop exhibitions.
+# Requires explicit allow_branches authorization in the private signing file; default is main/master only.
 feat/collection-lenses:
   push:
     - <<: *android

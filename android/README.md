@@ -4,6 +4,68 @@
 与网页版同根的产品，但代码、数据、资源完全独立：无 WebView、无 TWA、
 无第三方运行时依赖、无网络权限、无统计。
 
+## 2.2 · 桌面策展与完整构图
+
+在既有三种尺寸、三种展陈方式和每日精选上继续扩展，无新增权限或运行时依赖。
+
+- **展厅外观**：每个小部件独立选择纸白、墨青夜馆或琥珀暖砂，背景、展签、
+  手记和操作文字一起换色；旧小部件默认保持纸白。
+- **组合策展**：全部/心动/材质范围可以继续叠加「只看我的收藏」「只看照片」
+  「只看有手记」，配置页即时显示匹配件数。没有匹配时展示等待状态，
+  不擅自换成其他范围；之后新增或修改符合条件的藏品会刷新小部件。
+  固定藏品也必须符合组合条件，删除或移出范围后回退到当前范围。
+- **完整构图**：显式开启后，照片按比例居中留边，保留四边及原色，不叠加材质釉光；
+  留边跟随展厅外观，三联中的每张照片也独立保留全貌。图像区域使用适应居中，
+  避免启动器拉伸卡片后二次裁掉画面。关闭此选项保留原有材质光景渲染。
+- **双向浏览**：宽度至少 184dp 的画廊卡、至少 360dp 的横幅卡显示「上件 / 下件」，
+  首尾循环；一瞬和较窄卡片保留两项操作。固定展品或只有一件时隐藏上件。
+  手动换件保持到当日结束，关闭每日精选后持续保留；展签附当前范围的总件数。
+- **手记边界**：「有手记」只筛选，不自动展示正文；仅明确选择「一页手记」时显示。
+  新配置独立存于小部件偏好，随删除清理、随启动器 ID 恢复迁移，收藏与备份格式不变。
+
+### 2.2 验证入口
+
+继续使用根 `.cnb.yml` → `android/ci/build.sh`，不新建云构建入口：
+
+| CNB 模式 | 必须通过的任务 | 应核对的附件 |
+| --- | --- | --- |
+| 只配置固定预览签名 | `assembleDebug lintDebug assembleDebugAndroidTest` | `lumora-debug.apk`、`lint-results-debug.html`、`SHA256SUMS.txt` |
+| 四个签名变量齐备 | `assembleRelease lintRelease assembleDebugAndroidTest` | `lumora-release.apk`、`lint-results-release.html`、`SHA256SUMS.txt` |
+| 只配置部分签名变量 | 必须显式失败 | 不应产生新 APK |
+
+无任何签名配置时也会失败：云端预览包需要 `LUMORA_DEBUG_KEYSTORE_B64`，不再自动使用临时 debug 密钥。
+两种模式还会附带公开的 `signing-certificate.txt`，便于比较新旧 APK 的证书 SHA-256 指纹。
+
+`WidgetExhibitTest` 增加组合范围、空范围、上一件循环、同日保留、独立偏好、
+删除清理及新 ID 配置复制的用例；`WidgetAppearanceTest` 检查三主题下的原图四边、
+中心颜色及源位图不变，并实际应用三种布局的 RemoteViews 主题操作。
+CNB 的测试任务只编译这些用例，实际运行仍需隔离模拟器的 debug 包。
+
+启动器验收：在 API 26 和 API 31+ 的隔离模拟器各添加三种尺寸，检查切换主题、
+组合筛选为零件、固定项被删除/不再匹配、三联完整构图、上一件首尾循环、跨日刷新、
+缩放、较大系统字体、旋转配置页、删除并重新添加及多个小部件互不干扰。
+确认非手记样式不显示正文，配置和浏览前后的收藏导出数据一致。
+小部件更新受系统节电与启动器调度影响，继续不保证零点准时切换。
+
+本次改动文件（均位于 `android/`）：
+
+| 文件 | 用途 |
+| --- | --- |
+| `app/src/main/java/com/lumora/app/WidgetExhibit.java` | 组合筛选、外观偏好、双向选择与配置清理 |
+| `app/src/main/java/com/lumora/app/WidgetConfigureActivity.java` | 策展选项、实时匹配数量与旋转恢复 |
+| `app/src/main/java/com/lumora/app/WidgetAppearance.java`（新增） | 三主题配色与照片完整构图 |
+| `app/src/main/java/com/lumora/app/LumoraWidget.java` | 双向操作、主题应用与三联渲染 |
+| `app/src/main/res/layout/widget_compact.xml` | 一瞬布局的适应居中画面与统一控件 |
+| `app/src/main/res/layout/widget_wide.xml` | 横幅布局及上一件入口 |
+| `app/src/main/res/layout/widget_collectible.xml` | 画廊布局及上一件入口 |
+| `app/src/main/res/drawable/widget_bg_night.xml`（新增） | 墨青夜馆背景 |
+| `app/src/main/res/drawable/widget_bg_sand.xml`（新增） | 琥珀暖砂背景 |
+| `app/src/main/res/values/strings.xml` | 上一件文字与无障碍描述 |
+| `app/src/androidTest/java/com/lumora/app/WidgetExhibitTest.java` | 筛选、浏览及独立偏好回归用例 |
+| `app/src/androidTest/java/com/lumora/app/WidgetAppearanceTest.java`（新增） | 原图像素保留与三布局主题应用用例 |
+| `app/build.gradle` | 版本升级为 2.2.0（6） |
+| `README.md` | 交互、构建产物及设备验收说明 |
+
 ## 2.1 · 收藏色谱与桌面展览
 
 - 藏馆新增「收藏色谱」：在后台对照片的小图采样，按画面主色分为朱砂、晨金、
@@ -23,6 +85,8 @@
 本次变更从 CNB 已通过构建的 `a243da3b` 开始，保留此前的触感托盘、光学放大镜、
 分享工作室与装裱功能。预览分支 `feat/collection-lenses` 的 push 也会触发 `.cnb.yml`，
 无需合并到主分支即可在 CNB 检查 APK、lint 与测试包编译。
+接入固定签名后，该预览分支还需在机密文件的 `allow_branches` 中显式授权；
+当前生成的机密配置只允许 `main` / `master`，默认请在主分支验证固定签名构建。
 新增测试涵盖真实像素取色/缺失照片/只读性、严格范围、独立配置、跨日轮换与固定展品回退；
 CNB 编译这些 instrumentation 用例，设备运行仍需隔离模拟器。
 
@@ -85,17 +149,69 @@ Android 资源与网页版完全独立，不涉及网页 Service Worker 更新�
      `lint` + 测试编译 `assembleDebugAndroidTest`；
    - 附件阶段把 `android/artifacts/*`（APK、lint 报告、SHA256SUMS）挂到流水线记录。
 3. 在 CNB 流水线页面的「附件」里下载 APK 安装即可。
-   - 未配置签名时产出 `lumora-debug.apk`（debug 密钥随云端构建机而变，
-     只做预览，不作为可升级的生产包）。
+   - 只配置 `LUMORA_DEBUG_KEYSTORE_B64` 时产出固定预览签名的 `lumora-debug.apk`。
+   - 四个正式签名变量齐备时产出 `lumora-release.apk`；正式签名配置优先。
+   - 没有签名配置时显式失败，不再生成每次可能更换签名的预览包。
+
+### 预览版覆盖更新（一次配置）
+
+Android 覆盖安装需要保持包名、签名证书一致，且 `versionCode` 不低于已安装版本。
+每次发布仍应递增 `app/build.gradle` 中的 `versionCode`；不要通过改包名或删除应用数据解决更新。
+预览版包名始终为 `com.lumora.app.debug`，正式版始终为 `com.lumora.app`，两者互不覆盖。
+
+1. 若能找回**正在使用的旧云构建**的 `debug.keystore`，优先导入原密钥：
+
+   ```powershell
+   ./android/ci/prepare-debug-signing.ps1 -SourceKeystore '旧构建的 debug.keystore 路径'
+   ```
+
+   这会保留原证书与私钥，仅转换成 PKCS12 格式；默认采用 Android debug 的
+   `androiddebugkey` 别名与 `android` 密码。不是从 APK 中提取私钥，APK 本身无法恢复私钥。
+
+2. 没有旧密钥时，为拾光生成一次独立的预览密钥：
+
+   ```powershell
+   ./android/ci/prepare-debug-signing.ps1
+   ```
+
+   只需要 JDK，无需 SDK。密钥保存在被 Git 忽略的 `android/keystore/lumora-preview.p12`，
+   配套的 `lumora-debug-secrets.yml` 包含 CNB 机密配置，重复执行会复用同一密钥，拒绝覆盖已有密钥。
+   **新密钥无法覆盖旧签名的安装**；没有旧私钥时先从旧应用导出收藏备份，
+   再完成一次新签名版本的安装与备份恢复，之后持续使用同一签名即可覆盖更新。
+
+3. 新建一个 CNB 机密仓库，将生成的 `lumora-debug-secrets.yml` 上传到该私密仓库，
+   把根 `.cnb.yml` 的 `imports` 指向该文件的 blob 地址。
+   当前已接入 `sizuku-2025/lumora-secrets` 的 `main/lumora-debug-secrets.yml`。
+   参考 `android/ci/lumora-debug-secrets.example.yml`；仓库路径按实际调整，默认仅允许 main/master push 引用。
+   **不要上传到公开 Lumora 仓库、流水线附件或日志。** 标准 debug 密码是公开约定，
+   安全性依赖密钥文件保持私密。请同时保留离线备份。
+
+4. 连续构建两版，确认 `signing-certificate.txt` 中证书 SHA-256 指纹相同。
+   在隔离模拟器先安装旧版、写入测试收藏，再直接安装新版，确认收藏、照片和小部件配置保留。
+   仅 APK 编译通过不能证明升级成功；不要对个人设备执行卸载或清数据测试。
+
+云端的 `.android/debug.keystore` 会随构建环境改变，Gradle 缓存也不等于签名备份。
+`prepare-signing.sh` 在构建期间解码固定密钥，并在失败或退出时删除临时文件。
+CNB 无法读取私密密钥或变量缺失时会主动失败；本地默认 debug 构建不受此限制。
+
+不需要 SDK 的签名回归检查：
+
+```powershell
+python android/ci/check-cnb-shape.py
+python -m unittest discover -s android/ci -p test_signing.py -v
+```
+
+测试使用临时目录中的测试密钥，覆盖固定密钥复用、旧密钥导入后证书一致、
+无密钥拒绝、Release 四变量缺一拒绝、模式优先级、坏 base64 拒绝及退出清理。
 
 ### 发布签名（可选，长期发布前必须配好）
 
 - 在 CNB 建机密仓库，按 `android/ci/lumora-secrets.example.yml` 填四个
   `LUMORA_*` 变量（PKCS12 密钥库 base64 + 密码 + 别名）。
-- 把根 `.cnb.yml` 里 `.android` 锚点内（volumes 之后）注释掉的 `# imports:` 行取消注释，指向该机密文件。
+- 把根 `.cnb.yml` 里 `.android` 锚点内（volumes 之后）的 `imports:` 改为该正式签名机密文件地址。
 - 四变量齐备 → 流水线自动切 release；缺一即显式失败，绝不静默降级。
 - 密钥必须是为拾光新生成的，不复用其它应用的密钥/包名；
-  debug 密钥在云端构建机间不稳定，正式积累藏品数据前先配好持久签名。
+  预览版与正式版分别维护固定密钥，不复用；正式积累藏品数据前先配好持久发布签名。
 
 ## 本机构建（可选兜底）
 

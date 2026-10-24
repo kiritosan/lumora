@@ -62,6 +62,50 @@ public final class WidgetExhibitTest extends InstrumentationTestCase {
             false, today, today.minusDays(1).toString()).id);
     }
 
+    public void testCombinedDimensionsNeverFallBackOrWriteItems() {
+        List<Item> items = items();
+        Item photo = Item.newPhoto("照片", " 私人手记 ", Item.MATERIAL_SEA, "photo-1234.jpg");
+        photo.favorite = true;
+        items.add(photo);
+        Item sample = photo.copy();
+        sample.id = "sample-1234";
+        sample.sample = true;
+        items.add(sample);
+        WidgetExhibit exhibit = new WidgetExhibit();
+        exhibit.source = 1;
+        exhibit.personalOnly = true;
+        exhibit.photosOnly = true;
+        exhibit.notesOnly = true;
+        List<Item> matches = exhibit.candidates(items);
+        assertEquals(1, matches.size());
+        assertEquals(photo.id, matches.get(0).id);
+        matches.get(0).note = "改变快照";
+        assertEquals(" 私人手记 ", photo.note);
+        exhibit.source = 2;
+        assertTrue(exhibit.candidates(items).isEmpty());
+        exhibit.source = 1;
+        photo.note = "  \n ";
+        assertTrue(exhibit.candidates(items).isEmpty());
+        photo.note = null;
+        assertTrue(exhibit.candidates(items).isEmpty());
+    }
+
+    public void testPreviousWrapPinAndSameDayRetention() {
+        List<Item> items = items();
+        WidgetExhibit exhibit = new WidgetExhibit();
+        LocalDate day = LocalDate.of(2026, 10, 24);
+        Item previous = exhibit.choose(items, items.get(0).id, -1, day, null);
+        assertEquals(items.get(1).id, previous.id);
+        assertEquals(previous.id, exhibit.choose(items, previous.id, 0, day, day.toString()).id);
+        assertEquals(items.get(0).id, exhibit.choose(items, previous.id, 1, day, day.toString()).id);
+        exhibit.pinned = items.get(0).id;
+        assertEquals(exhibit.pinned, exhibit.choose(items, previous.id, -1, day, null).id);
+        exhibit.pinned = null;
+        assertEquals(items.get(1).id, exhibit.choose(items, "deleted-item", -1, day, null).id);
+        assertNull(exhibit.choose(Collections.emptyList(), null, -1, day, null));
+        assertFalse(items.get(0).favorite);
+    }
+
     public void testPreferencesAndCleanupAreIndependentPerWidget() {
         String sandbox = "widget-test-" + java.util.UUID.randomUUID();
         android.content.Context context = new android.content.ContextWrapper(
@@ -75,6 +119,11 @@ public final class WidgetExhibitTest extends InstrumentationTestCase {
             first.style = 2;
             first.source = 1;
             first.pinned = "a-pinned-item";
+            first.theme = 2;
+            first.personalOnly = true;
+            first.photosOnly = true;
+            first.notesOnly = true;
+            first.fullImage = true;
             first.save(context, 11);
             WidgetExhibit second = new WidgetExhibit();
             second.style = 1;
@@ -82,10 +131,26 @@ public final class WidgetExhibitTest extends InstrumentationTestCase {
             second.save(context, 12);
             assertEquals(2, WidgetExhibit.load(context, 11).style);
             assertEquals("a-pinned-item", WidgetExhibit.load(context, 11).pinned);
+            WidgetExhibit restored = WidgetExhibit.load(context, 11);
+            assertEquals(2, restored.theme);
+            assertTrue(restored.personalOnly && restored.photosOnly && restored.notesOnly && restored.fullImage);
+            assertFalse(WidgetExhibit.load(context, 12).fullImage);
+            // Launcher restore copies every new dimension to its new widget ID.
+            restored.save(context, 13);
+            assertTrue(WidgetExhibit.load(context, 13).photosOnly);
+            assertEquals(2, WidgetExhibit.load(context, 13).theme);
             WidgetExhibit.remove(context, 11);
             assertNull(WidgetExhibit.load(context, 11).pinned);
+            assertEquals(0, WidgetExhibit.load(context, 11).theme);
+            assertFalse(WidgetExhibit.load(context, 11).personalOnly);
+            assertFalse(WidgetExhibit.load(context, 11).photosOnly);
+            assertFalse(WidgetExhibit.load(context, 11).notesOnly);
+            assertFalse(WidgetExhibit.load(context, 11).fullImage);
+            assertTrue(WidgetExhibit.load(context, 13).fullImage);
             assertEquals(1, WidgetExhibit.load(context, 12).style);
             assertFalse(WidgetExhibit.load(context, 12).daily);
+            WidgetExhibit.prefs(context).edit().putInt("theme_12", 999).commit();
+            assertEquals(2, WidgetExhibit.load(context, 12).theme);
         } finally { WidgetExhibit.prefs(context).edit().clear().commit(); }
     }
 }

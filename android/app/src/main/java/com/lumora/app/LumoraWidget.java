@@ -21,6 +21,7 @@ public class LumoraWidget extends AppWidgetProvider {
     static final String ACTION_OPEN_ITEM = "com.lumora.app.OPEN_ITEM";
     static final String EXTRA_ITEM_ID = "itemId";
     static final String ACTION_NEXT = "com.lumora.app.WIDGET_NEXT";
+    static final String ACTION_PREVIOUS = "com.lumora.app.WIDGET_PREVIOUS";
     private static final String PREFS = WidgetExhibit.PREFS;
 
     public static final class Compact extends LumoraWidget { }
@@ -28,14 +29,14 @@ public class LumoraWidget extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager mgr, int[] ids) {
-        queueRender(context, ids, goAsync(), false);
+        queueRender(context, ids, goAsync(), 0);
     }
 
     @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager mgr,
                                            int id, Bundle options) {
         super.onAppWidgetOptionsChanged(context, mgr, id, options);
-        queueRender(context, new int[] {id}, goAsync(), false);
+        queueRender(context, new int[] {id}, goAsync(), 0);
     }
 
     @Override
@@ -45,11 +46,11 @@ public class LumoraWidget extends AppWidgetProvider {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (ACTION_NEXT.equals(intent.getAction())) {
+        if (ACTION_NEXT.equals(intent.getAction()) || ACTION_PREVIOUS.equals(intent.getAction())) {
             int id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
             android.appwidget.AppWidgetProviderInfo info = AppWidgetManager.getInstance(context).getAppWidgetInfo(id);
             if (info != null && info.provider.equals(new ComponentName(context, getClass()))) {
-                queueRender(context, new int[] {id}, goAsync(), true);
+                queueRender(context, new int[] {id}, goAsync(), ACTION_NEXT.equals(intent.getAction()) ? 1 : -1);
             }
             return;
         }
@@ -66,19 +67,19 @@ public class LumoraWidget extends AppWidgetProvider {
             for (Class<?> provider : new Class<?>[] {
                 LumoraWidget.class, Compact.class, Wide.class
             }) {
-                renderIds(appCtx, mgr.getAppWidgetIds(new ComponentName(appCtx, provider)), false);
+                renderIds(appCtx, mgr.getAppWidgetIds(new ComponentName(appCtx, provider)), 0);
             }
         });
     }
 
     private static void queueRender(Context context, int[] ids, PendingResult pending,
-                                     boolean advance) {
+                                     int direction) {
         Context appCtx = context.getApplicationContext();
         AppState app = AppState.get(appCtx);
         app.ensureLoaded();
         app.io().execute(() -> {
             try {
-                renderIds(appCtx, ids, advance);
+                renderIds(appCtx, ids, direction);
             } finally {
                 pending.finish();
             }
@@ -104,7 +105,7 @@ public class LumoraWidget extends AppWidgetProvider {
         return items.get(index);
     }
 
-    private static void renderIds(Context context, int[] ids, boolean advance) {
+    private static void renderIds(Context context, int[] ids, int direction) {
         if (ids == null || ids.length == 0) return;
         AppState app = AppState.get(context);
         // A failed load must never replace a real collection with the empty state.
@@ -117,7 +118,7 @@ public class LumoraWidget extends AppWidgetProvider {
             WidgetExhibit exhibit = WidgetExhibit.load(context, id);
             List<Item> candidates = exhibit.candidates(items);
             java.time.LocalDate day = java.time.LocalDate.now();
-            Item item = exhibit.choose(candidates, prefs.getString("selection_" + id, null), advance,
+            Item item = exhibit.choose(candidates, prefs.getString("selection_" + id, null), direction,
                 day, prefs.getString("day_" + id, null));
             prefs.edit().putString("selection_" + id, item == null ? null : item.id)
                 .putString("day_" + id, day.toString()).apply();
@@ -147,15 +148,21 @@ public class LumoraWidget extends AppWidgetProvider {
             : wide || (height > 0 && height < 170)
                 ? R.layout.widget_wide : R.layout.widget_collectible;
         RemoteViews views = new RemoteViews(context.getPackageName(), layout);
+        WidgetAppearance.apply(views, exhibit.theme);
         Bitmap photo = exhibit.style != 1 && item != null && item.isPhoto()
             ? AppState.get(context).repo().loadPhoto(item.photoName, 640) : null;
         int state = item != null && item.isPhoto() && photo == null
             ? ArtworkRenderer.PHOTO_FAILED : ArtworkRenderer.PHOTO_OK;
         Item display = item != null ? item
             : Item.newProcedural("", "", Item.MATERIAL_MIST, 2);
-        Bitmap artwork = exhibit.style == 1 && item != null
-            ? renderTriptych(context, candidates, item)
-            : ArtworkRenderer.renderArtBitmap(480, 360, display, photo, state);
+        Bitmap artwork;
+        if (exhibit.style == 1 && item != null) {
+            artwork = renderTriptych(context, candidates, item, exhibit);
+        } else {
+            artwork = Bitmap.createBitmap(480, 360, Bitmap.Config.ARGB_8888);
+            WidgetAppearance.draw(new android.graphics.Canvas(artwork), 480, 360,
+                display, photo, state, exhibit.fullImage, exhibit.theme);
+        }
         views.setImageViewBitmap(R.id.widget_art, artwork);
         String description = item == null ? "还没有符合范围的藏品"
             : exhibit.style == 1 ? "三联展陈，从“" + item.title + "”开始，点按查看首件藏品"
@@ -174,6 +181,7 @@ public class LumoraWidget extends AppWidgetProvider {
         views.setTextViewText(R.id.widget_sub, item != null
             ? (item.favorite ? "♥  " : "") + Ui.materialName(item.material)
                 + "  /  " + (exhibit.isPinned(item) ? "常驻展品" : exhibit.daily ? "每日重逢" : Ui.dateCompact(item.created))
+                + "  ·  共 " + count + " 件"
             : WidgetExhibit.SOURCES[exhibit.source] + " / 暂无匹配");
         Intent open = new Intent(context, MainActivity.class).setAction(ACTION_OPEN_ITEM)
             .setData(Uri.parse("lumora://widget/" + id + "/"
@@ -192,6 +200,19 @@ public class LumoraWidget extends AppWidgetProvider {
         views.setTextViewText(R.id.widget_next, count > 1 && !exhibit.isPinned(item) ? "换一件 →" : "赏光 ↗");
         views.setContentDescription(R.id.widget_next, count > 1 && !exhibit.isPinned(item)
             ? "在当前展览范围内切换下一件藏品" : "打开当前展品");
+        Intent previous = new Intent(ACTION_PREVIOUS).setComponent(info.provider)
+            .setData(Uri.parse("lumora://widget/" + id + "/previous"))
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+        boolean canBrowse = count > 1 && !exhibit.isPinned(item);
+        // Keep the three controls readable in the wide layout's narrower text column.
+        boolean showPrevious = canBrowse && (layout == R.layout.widget_collectible && (width == 0 || width >= 184)
+            || layout == R.layout.widget_wide && width >= 360);
+        views.setViewVisibility(R.id.widget_previous, showPrevious
+            ? android.view.View.VISIBLE : android.view.View.GONE);
+        if (showPrevious) views.setTextViewText(R.id.widget_next, "下件 →");
+        views.setOnClickPendingIntent(R.id.widget_previous, canBrowse
+            ? PendingIntent.getBroadcast(context, id, previous,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE) : openPi);
         Intent configure = new Intent(context, WidgetConfigureActivity.class)
             .setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
             .setData(Uri.parse("lumora://widget/" + id + "/configure"))
@@ -200,10 +221,10 @@ public class LumoraWidget extends AppWidgetProvider {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         mgr.updateAppWidget(id, views);
     }
-    private static Bitmap renderTriptych(Context context, List<Item> items, Item selected) {
+    private static Bitmap renderTriptych(Context context, List<Item> items, Item selected, WidgetExhibit exhibit) {
         Bitmap bitmap = Bitmap.createBitmap(480, 360, Bitmap.Config.ARGB_8888);
         android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
-        canvas.drawColor(Ui.PAPER);
+        canvas.drawColor(WidgetAppearance.paper(exhibit.theme));
         int first = 0;
         for (int i = 0; i < items.size(); i++) if (items.get(i).id.equals(selected.id)) first = i;
         int count = Math.min(3, items.size());
@@ -215,7 +236,7 @@ public class LumoraWidget extends AppWidgetProvider {
             canvas.save();
             canvas.translate(i * (width + 8), 0);
             canvas.clipRect(0, 0, width, 360);
-            ArtworkRenderer.drawArtwork(canvas, width, 360, item, photo, 0, 0, state);
+            WidgetAppearance.draw(canvas, width, 360, item, photo, state, exhibit.fullImage, exhibit.theme);
             canvas.restore();
         }
         return bitmap;

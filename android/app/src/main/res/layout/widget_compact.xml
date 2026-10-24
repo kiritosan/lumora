@@ -11,8 +11,13 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:scaleType="centerCrop"
+        android:scaleType="fitCenter"
         android:contentDescription="@string/widget_desc" />
+    <TextView
+        android:id="@+id/widget_brand"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
     <TextView
         android:id="@+id/widget_title"
         android:layout_width="match_parent"
@@ -55,6 +60,16 @@
             android:contentDescription="@string/widget_configure_desc"
             android:textColor="#183B38"
             android:textSize="12sp" />
+        <TextView
+            android:id="@+id/widget_previous"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/widget_previous"
+            android:contentDescription="@string/widget_previous_desc"
+            android:textSize="12sp"
+            android:visibility="gone" />
         <TextView
             android:id="@+id/widget_next"
             android:layout_width="0dp"
