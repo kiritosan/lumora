@@ -21,7 +21,7 @@ public class LumoraWidget extends AppWidgetProvider {
     static final String ACTION_OPEN_ITEM = "com.lumora.app.OPEN_ITEM";
     static final String EXTRA_ITEM_ID = "itemId";
     static final String ACTION_NEXT = "com.lumora.app.WIDGET_NEXT";
-    private static final String PREFS = "lumora_widget_display";
+    private static final String PREFS = WidgetExhibit.PREFS;
 
     public static final class Compact extends LumoraWidget { }
     public static final class Wide extends LumoraWidget { }
@@ -40,17 +40,17 @@ public class LumoraWidget extends AppWidgetProvider {
 
     @Override
     public void onDeleted(Context context, int[] ids) {
-        android.content.SharedPreferences.Editor prefs =
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit();
-        for (int id : ids) prefs.remove("selection_" + id);
-        prefs.apply();
+        for (int id : ids) WidgetExhibit.remove(context, id);
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         if (ACTION_NEXT.equals(intent.getAction())) {
             int id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
-            if (id != -1) queueRender(context, new int[] {id}, goAsync(), true);
+            android.appwidget.AppWidgetProviderInfo info = AppWidgetManager.getInstance(context).getAppWidgetInfo(id);
+            if (info != null && info.provider.equals(new ComponentName(context, getClass()))) {
+                queueRender(context, new int[] {id}, goAsync(), true);
+            }
             return;
         }
         super.onReceive(context, intent);
@@ -114,15 +114,27 @@ public class LumoraWidget extends AppWidgetProvider {
         android.content.SharedPreferences prefs =
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         for (int id : ids) {
-            Item item = choose(items, prefs.getString("selection_" + id, null), advance);
-            if (item != null) prefs.edit().putString("selection_" + id, item.id).apply();
-            else prefs.edit().remove("selection_" + id).apply();
-            renderOne(context, mgr, id, item, items.size());
+            WidgetExhibit exhibit = WidgetExhibit.load(context, id);
+            List<Item> candidates = exhibit.candidates(items);
+            java.time.LocalDate day = java.time.LocalDate.now();
+            Item item = exhibit.choose(candidates, prefs.getString("selection_" + id, null), advance,
+                day, prefs.getString("day_" + id, null));
+            prefs.edit().putString("selection_" + id, item == null ? null : item.id)
+                .putString("day_" + id, day.toString()).apply();
+            renderOne(context, mgr, id, item, candidates, exhibit);
+        }
+    }
+
+    @Override public void onRestored(Context context, int[] oldIds, int[] newIds) {
+        for (int i = 0; i < Math.min(oldIds.length, newIds.length); i++) {
+            WidgetExhibit.load(context, oldIds[i]).save(context, newIds[i]);
+            WidgetExhibit.remove(context, oldIds[i]);
         }
     }
 
     private static void renderOne(Context context, AppWidgetManager mgr, int id,
-                                   Item item, int count) {
+                                   Item item, List<Item> candidates, WidgetExhibit exhibit) {
+        int count = candidates.size();
         android.appwidget.AppWidgetProviderInfo info = mgr.getAppWidgetInfo(id);
         if (info == null) return;
         Bundle options = mgr.getAppWidgetOptions(id);
@@ -135,19 +147,34 @@ public class LumoraWidget extends AppWidgetProvider {
             : wide || (height > 0 && height < 170)
                 ? R.layout.widget_wide : R.layout.widget_collectible;
         RemoteViews views = new RemoteViews(context.getPackageName(), layout);
-        Bitmap photo = item != null && item.isPhoto()
+        Bitmap photo = exhibit.style != 1 && item != null && item.isPhoto()
             ? AppState.get(context).repo().loadPhoto(item.photoName, 640) : null;
         int state = item != null && item.isPhoto() && photo == null
             ? ArtworkRenderer.PHOTO_FAILED : ArtworkRenderer.PHOTO_OK;
         Item display = item != null ? item
             : Item.newProcedural("", "", Item.MATERIAL_MIST, 2);
-        views.setImageViewBitmap(R.id.widget_art,
-            ArtworkRenderer.renderArtBitmap(480, 360, display, photo, state));
+        Bitmap artwork = exhibit.style == 1 && item != null
+            ? renderTriptych(context, candidates, item)
+            : ArtworkRenderer.renderArtBitmap(480, 360, display, photo, state);
+        views.setImageViewBitmap(R.id.widget_art, artwork);
+        String description = item == null ? "还没有符合范围的藏品"
+            : exhibit.style == 1 ? "三联展陈，从“" + item.title + "”开始，点按查看首件藏品"
+            : "藏品“" + item.title + "”，点按赏光";
+        views.setContentDescription(R.id.widget_art, description);
+        boolean tiny = layout == R.layout.widget_compact && height > 0 && height < 160;
+        views.setViewVisibility(R.id.widget_sub, tiny ? android.view.View.GONE : android.view.View.VISIBLE);
+        views.setViewVisibility(R.id.widget_title, tiny && exhibit.style != 2 ? android.view.View.GONE : android.view.View.VISIBLE);
+        views.setViewVisibility(R.id.widget_art, tiny && exhibit.style == 2 ? android.view.View.GONE : android.view.View.VISIBLE);
+        views.setViewVisibility(R.id.widget_note, exhibit.style == 2 ? android.view.View.VISIBLE : android.view.View.GONE);
+        views.setInt(R.id.widget_note, "setMaxLines", tiny ? 1 : 2);
+        views.setTextViewText(R.id.widget_note, exhibit.style != 2 ? "" : item == null ? "等一件值得留下的收藏。"
+            : item.note == null || item.note.trim().isEmpty() ? "这一件，还没有写下手记。" : "“" + item.note.trim() + "”");
         views.setTextViewText(R.id.widget_title,
-            item != null ? item.title : "收集第一束光");
+            item != null ? item.title : count == 0 ? "展览等待一束光" : "收集第一束光");
         views.setTextViewText(R.id.widget_sub, item != null
             ? (item.favorite ? "♥  " : "") + Ui.materialName(item.material)
-                + "  /  " + Ui.dateCompact(item.created) : "LUMORA  /  今日一藏");
+                + "  /  " + (exhibit.isPinned(item) ? "常驻展品" : exhibit.daily ? "每日重逢" : Ui.dateCompact(item.created))
+            : WidgetExhibit.SOURCES[exhibit.source] + " / 暂无匹配");
         Intent open = new Intent(context, MainActivity.class).setAction(ACTION_OPEN_ITEM)
             .setData(Uri.parse("lumora://widget/" + id + "/"
                 + (item == null ? "home" : item.id)));
@@ -158,11 +185,40 @@ public class LumoraWidget extends AppWidgetProvider {
         Intent next = new Intent(ACTION_NEXT).setComponent(info.provider)
             .setData(Uri.parse("lumora://widget/" + id + "/next"))
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
-        views.setOnClickPendingIntent(R.id.widget_next, count > 1
+        views.setOnClickPendingIntent(R.id.widget_next, count > 1 && !exhibit.isPinned(item)
             ? PendingIntent.getBroadcast(context, id, next,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE)
             : openPi);
-        views.setTextViewText(R.id.widget_next, count > 1 ? "下一件  →" : "打开  ↗");
+        views.setTextViewText(R.id.widget_next, count > 1 && !exhibit.isPinned(item) ? "换一件 →" : "赏光 ↗");
+        views.setContentDescription(R.id.widget_next, count > 1 && !exhibit.isPinned(item)
+            ? "在当前展览范围内切换下一件藏品" : "打开当前展品");
+        Intent configure = new Intent(context, WidgetConfigureActivity.class)
+            .setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
+            .setData(Uri.parse("lumora://widget/" + id + "/configure"))
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+        views.setOnClickPendingIntent(R.id.widget_configure, PendingIntent.getActivity(context, id, configure,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         mgr.updateAppWidget(id, views);
     }
+    private static Bitmap renderTriptych(Context context, List<Item> items, Item selected) {
+        Bitmap bitmap = Bitmap.createBitmap(480, 360, Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+        canvas.drawColor(Ui.PAPER);
+        int first = 0;
+        for (int i = 0; i < items.size(); i++) if (items.get(i).id.equals(selected.id)) first = i;
+        int count = Math.min(3, items.size());
+        int width = (480 - (count - 1) * 8) / count;
+        for (int i = 0; i < count; i++) {
+            Item item = items.get((first + i) % items.size());
+            Bitmap photo = item.isPhoto() ? AppState.get(context).repo().loadPhoto(item.photoName, 320) : null;
+            int state = item.isPhoto() && photo == null ? ArtworkRenderer.PHOTO_FAILED : ArtworkRenderer.PHOTO_OK;
+            canvas.save();
+            canvas.translate(i * (width + 8), 0);
+            canvas.clipRect(0, 0, width, 360);
+            ArtworkRenderer.drawArtwork(canvas, width, 360, item, photo, 0, 0, state);
+            canvas.restore();
+        }
+        return bitmap;
+    }
+
 }
