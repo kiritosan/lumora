@@ -46,13 +46,39 @@
             android:ellipsize="end"
             android:textColor="#667265"
             android:textSize="12sp" />
+    <TextView
+        android:id="@+id/widget_note"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:fontFamily="serif"
+        android:textSize="13sp"
+        android:textColor="#183B38"
+        android:visibility="gone" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal">
+        <TextView
+            android:id="@+id/widget_configure"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/widget_configure"
+            android:contentDescription="@string/widget_configure_desc"
+            android:textColor="#183B38"
+            android:textSize="12sp" />
         <TextView
             android:id="@+id/widget_next"
-            android:layout_width="match_parent"
-            android:layout_height="32dp"
-            android:gravity="start|center_vertical"
-            android:textColor="#AF7449"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="#183B38"
             android:textSize="12sp"
             android:contentDescription="@string/widget_next_desc" />
+    </LinearLayout>
     </LinearLayout>
 </LinearLayout>
