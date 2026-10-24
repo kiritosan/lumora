@@ -22,4 +22,7 @@
     <item name="tactile_gravity" type="id" />
     <item name="tactile_shake" type="id" />
     <item name="tactile_magnet" type="id" />
+    <item name="view_palette" type="id" />
+    <item name="view_notes" type="id" />
+    <item name="widget_save" type="id" />
 </resources>
