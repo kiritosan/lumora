@@ -28,3 +28,8 @@ main:
 master:
   push:
     - <<: *android
+
+# Isolated preview build for the collection palette and configurable desktop exhibitions.
+feat/collection-lenses:
+  push:
+    - <<: *android
