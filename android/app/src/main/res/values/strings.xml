@@ -9,4 +9,6 @@
     <string name="widget_wide_desc">横向光桌，在桌面浏览藏品与展签。</string>
     <string name="widget_next_desc">浏览下一件藏品</string>
     <string name="widget_brand">LUMORA / 藏馆</string>
+    <string name="widget_configure">布展</string>
+    <string name="widget_configure_desc">设置这个桌面展览</string>
 </resources>
